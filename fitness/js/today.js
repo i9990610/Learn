@@ -60,13 +60,15 @@ function todayWorkoutCard(k) {
   const di = weekdayIdx(k), day = plan.days[di];
   const done = S.workouts.filter(w => w.date === k);
   if (S.activeWorkout) return `<div class="card yellow hero" style="min-height:0"><div class="eyebrow">In progress</div><h2>${esc(S.activeWorkout.title)}</h2><div style="margin-top:14px"><button class="btn primary" data-act="resumeWorkout">Resume</button></div>${blob('var(--blue)', 2)}</div>`;
-  if (done.length) return `<div class="card mint hero" style="min-height:0"><div class="eyebrow">Training · done ✓</div><h2>Nice work!</h2><p>${done.map(w => esc(w.title)).join(', ')}: ${done.reduce((a, w) => a + w.exercises.reduce((b, e) => b + e.sets.filter(s => s.done).length, 0), 0)} set(s) logged.</p>${blob('var(--yellow)', 1)}</div>`;
+  const lifted = done.some(w => !w.activity);
+  if (lifted || (done.length && !day?.exercises?.length)) return `<div class="card mint hero" style="min-height:0"><div class="eyebrow">Training · done ✓</div><h2>Nice work!</h2><p>${done.map(w => w.activity ? `${esc(w.title)} (${w.durationMin} min)` : `${esc(w.title)}: ${w.exercises.reduce((b, e) => b + e.sets.filter(s => s.done).length, 0)} sets`).join(' · ')}</p>${blob('var(--yellow)', 1)}</div>`;
+  if (day && !day.exercises?.length && day.activities?.length) return `<div class="card blue hero" style="min-height:0"><div class="eyebrow">Today</div><h2>${esc(day.title)}</h2>${activityList(day, di)}${blob('var(--mint)', 1)}</div>`;
   if (!day || !day.exercises?.length) return `<div class="card mint hero" style="min-height:0"><div class="eyebrow">Training</div><h2>Rest day</h2><p class="muted">${esc(day?.cardio || 'Recover: walk, stretch, sleep.')}</p>${blob('var(--cream)', 1)}</div>`;
   const r = readiness(S.recovery[k]);
   return `<div class="card blue hero" style="min-height:0"><div class="eyebrow">Today's session</div><h2>${esc(day.title)}</h2>
     <p class="muted">${day.exercises.length} exercises · ${day.exercises.reduce((a, e) => a + e.sets, 0)} sets</p>
     ${r != null && r < 55 ? '<p class="small" style="margin-top:6px;max-width:70%">Readiness is low. Drop a set per exercise or keep 3+ reps in reserve.</p>' : ''}
-    <div style="margin-top:14px"><button class="btn primary" data-act="startWorkout" data-arg="${di}">Start workout</button></div>${blob('var(--pink)', 2)}</div>`;
+    <div style="margin-top:14px"><button class="btn primary" data-act="startWorkout" data-arg="${di}">Start workout</button></div>${day.activities?.length ? `<div style="max-width:78%">${activityList(day, di)}</div>` : ''}${blob('var(--pink)', 2)}</div>`;
 }
 
 function streaksCard() {
@@ -76,7 +78,7 @@ function streaksCard() {
   const cals = streak(k => { const c = dayTotals(k).kcal; return c > 0 && Math.abs(c - T.kcal) <= T.kcal * 0.1; });
   const water = streak(k => waterTotal(k) >= T.waterMl);
   const ws = weekStart(today());
-  const planned = S.training.plan ? S.training.plan.days.filter(d => d.exercises?.length).length : 0;
+  const planned = S.training.plan ? S.training.plan.days.filter(d => d.exercises?.length || d.activities?.length).length : 0;
   const doneWeek = new Set(S.workouts.filter(w => w.date >= ws).map(w => w.date)).size;
   const s = (v, l, c) => `<div class="stat streak ${c}"><div class="v num">${v}</div><div class="l">${l}</div></div>`;
   return `<div class="card"><h2>Streaks <span class="small muted">🔥 keep it going</span></h2><div class="grid3">${s(protein, 'days protein', 'blue')}${s(cals, 'days on kcal', 'yellow')}${s(water, 'days water', 'mint')}${s(logged, 'days logged', 'pink')}${s(`${doneWeek}/${planned || '–'}`, 'sessions', '')}${s(checkinDue() ? 'Due' : 'OK', 'check-in', '')}</div></div>`;

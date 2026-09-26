@@ -8,6 +8,8 @@ const QUESTIONS = [
   { id: 'days', q: 'Which days can you usually train?', type: 'many', opts: DAYS, hint: 'Pick the days you can realistically make most weeks.' },
   { id: 'length', q: 'How long can a session be?', type: 'one', opts: ['30 min', '45 min', '60 min', '75 min', '90 min'] },
   { id: 'equipment', q: 'What equipment do you have?', type: 'one', opts: ['Full commercial gym', 'Home: dumbbells + bench', 'Home: barbell, rack, bench', 'Bodyweight only', 'Mostly machines / cables'] },
+  { id: 'facilities', q: 'What else can you access or enjoy doing?', type: 'many', opts: ['Pool / swimming', 'Group fitness classes', 'Spin / cycle classes', 'Reformer / Pilates', 'Yoga', 'HIIT / circuit classes', 'Boxing / martial arts', 'Running (outdoor or treadmill)', 'Rowing / SkiErg', 'Sports / courts', 'Sauna / recovery', 'None of these'], hint: 'Pick everything available. The plan can use these for cardio, recovery or variety.' },
+  { id: 'classes', q: 'Any classes or sessions you want built in?', type: 'text', hint: 'Optional. e.g. "Reformer Tue 6pm, Body Pump Sat 8am, swim squad Thu", or "happy for you to pick".' },
   { id: 'split', q: 'Any preference on how the week is split?', type: 'one', opts: ['Choose for me', 'Full body', 'Upper / lower', 'Push / pull / legs', 'Body-part split'] },
   { id: 'priority', q: 'Any muscles you want to prioritise?', type: 'many', opts: ['Glutes', 'Quads', 'Hamstrings', 'Back', 'Chest', 'Shoulders', 'Arms', 'Core', 'None in particular'] },
   { id: 'cardio', q: 'How much cardio do you want in the plan?', type: 'one', opts: ['None', '1–2 sessions a week', '3+ sessions a week', 'Just daily steps'] },
@@ -20,7 +22,7 @@ V.train = () => {
   if (ui.q) return questionnaireView();
   if (S.activeWorkout) return loggerView();
   if (!S.training.plan) {
-    return `<div class="card pink hero"><div class="eyebrow">Training</div><h2>Let's build your plan</h2><p>I'll ask ${QUESTIONS.length} quick questions about your goals, experience, schedule and equipment, then build a weekly plan around them. ${aiReady() ? 'Your AI coach will write the plan.' : 'Without an AI key a solid template is built from your answers; add a key in Settings for a fully tailored plan.'}</p>
+    return `<div class="card pink hero"><div class="eyebrow">Training</div><h2>Let's build your plan</h2><p>I'll ask ${QUESTIONS.length} quick questions about your goals, experience, schedule, equipment and the facilities or classes you have, then build a weekly plan around them. ${aiReady() ? 'Your AI coach will write the plan.' : 'Without an AI key a solid template is built from your answers; add a key in Settings for a fully tailored plan.'}</p>
       <div style="margin-top:16px"><button class="btn primary" data-act="startQ">Start</button></div>${blob('var(--cream)', 2)}</div>
       <div class="card"><h2>Or just log</h2><p class="small muted">Log a session without a plan.</p><button class="btn block" data-act="startWorkout" data-arg="free">Start empty workout</button></div>`;
   }
@@ -74,13 +76,13 @@ A.qFinish = async (_, btn) => {
   ui.q = null; ui.trainSub = 'plan'; save(); render();
 };
 
-const PLAN_SHAPE = `{"name": "string", "summary": "2-3 sentences on why this plan fits the user", "progression": "how to progress week to week (load/reps/RIR), plain text", "deload": "when/how to deload", "days": [{"day": "Mon", "title": "e.g. Upper A or Rest", "focus": "short", "cardio": "optional cardio/steps note", "exercises": [{"name": "Barbell Back Squat", "muscle": "one of: chest, back, shoulders, biceps, triceps, quads, hamstrings, glutes, calves, core, full body, cardio", "sets": 3, "reps": "6-8", "rest": 120, "rir": "2", "notes": "short cue or substitution"}]}]}
-"days" must contain exactly 7 entries Mon..Sun in order. Rest days have an empty exercises array.`;
+const PLAN_SHAPE = `{"name": "string", "summary": "2-3 sentences on why this plan fits the user", "progression": "how to progress week to week (load/reps/RIR), plain text", "deload": "when/how to deload", "days": [{"day": "Mon", "title": "e.g. Upper A or Rest", "focus": "short", "cardio": "optional steps/cardio note", "activities": [{"name": "e.g. Swim, Reformer Pilates class, Spin class", "type": "swim|class|cardio|mobility|sport|recovery", "duration": 45, "details": "what to do, e.g. 10 x 50 m freestyle easy, or class name/time"}], "exercises": [{"name": "Barbell Back Squat", "muscle": "one of: chest, back, shoulders, biceps, triceps, quads, hamstrings, glutes, calves, core, full body, cardio", "sets": 3, "reps": "6-8", "rest": 120, "rir": "2", "notes": "short cue or substitution"}]}]}
+"days" must contain exactly 7 entries Mon..Sun in order. A day can have lifting exercises, activities, both, or neither (a rest day has empty exercises and activities).`;
 
 async function aiPlan(answers) {
   const recent = recoverySummary();
   const system = `You are an experienced strength & conditioning coach writing an evidence-based weekly resistance training plan (volume ~10-20 hard sets per muscle per week scaled to experience, compound lifts first, appropriate rep ranges and rest for the goal, progressive overload, exercise choices matched to equipment and injuries). ${userContext()}`;
-  const user = `Build my weekly training plan from these answers:\n${JSON.stringify(answers, null, 2)}\n${recent}\nOnly schedule training on the days I said I'm available. Fit each session within my session length including warm-up. JSON shape:\n${PLAN_SHAPE}`;
+  const user = `Build my weekly training plan from these answers:\n${JSON.stringify(answers, null, 2)}\n${recent}\nOnly schedule training on the days I said I'm available. Fit each session within my session length including warm-up. Use the facilities and classes I have access to (pool, group classes etc.) as "activities" where they serve my goals: for cardio, conditioning, active recovery or enjoyment. Put any specific classes I named on the day I said. Account for class fatigue when placing heavy lifting (e.g. no hard leg day right after spin or HIIT). JSON shape:\n${PLAN_SHAPE}`;
   return aiJSON(system, [{ role: 'user', content: user }], { effort: 'medium', maxTokens: 16000 });
 }
 
@@ -88,7 +90,8 @@ function normalisePlan(p) {
   const days = DAYS.map((d, i) => {
     const src = (p.days || []).find(x => (x.day || '').slice(0, 3).toLowerCase() === d.toLowerCase()) || (p.days || [])[i] || {};
     return {
-      day: d, title: src.title || (src.exercises?.length ? 'Session' : 'Rest'), focus: src.focus || '', cardio: src.cardio || '',
+      day: d, title: src.title || (src.exercises?.length ? 'Session' : src.activities?.length ? src.activities[0].name : 'Rest'), focus: src.focus || '', cardio: src.cardio || '',
+      activities: (src.activities || []).filter(x => x && x.name).map(x => ({ name: x.name, type: x.type || 'cardio', duration: r0(num(x.duration, 45)), details: x.details || '' })),
       exercises: (src.exercises || []).map(e => ({ name: e.name || 'Exercise', muscle: (e.muscle || '').toLowerCase(), sets: Math.max(1, r0(num(e.sets, 3))), reps: String(e.reps || '8-12'), rest: r0(num(e.rest, 90)), rir: String(e.rir ?? ''), notes: e.notes || '' })),
     };
   });
@@ -147,8 +150,52 @@ function templatePlan(a) {
     summary: `A ${n}-day template matched to your goal (${a.goal}) and equipment. Add an AI key in Settings and redo setup for a plan tailored to your injuries, priorities and schedule.`,
     progression: `Double progression: when you hit the top of the rep range on all sets at the target RIR, add 2.5 kg (upper) or 5 kg (lower) next session, or one rep if using fixed dumbbells.`,
     deload: 'Every 6–8 weeks, or when performance drops two sessions in a row: halve the sets for one week.',
-    days: DAYS.map(d => { const i = days.indexOf(d); if (i < 0) return { day: d, title: 'Rest', exercises: [], cardio }; const [title, exs] = T[seq[i % seq.length]]; return { day: d, title, focus: '', exercises: exs, cardio: '' }; }),
+    days: addTemplateActivities(DAYS.map(d => { const i = days.indexOf(d); if (i < 0) return { day: d, title: 'Rest', exercises: [], activities: [], cardio }; const [title, exs] = T[seq[i % seq.length]]; return { day: d, title, focus: '', exercises: exs, activities: [], cardio: '' }; }), a),
   };
+}
+
+const ACT_TEMPLATES = [
+  [/pool|swim/i, { name: 'Swim', type: 'swim', duration: 30, details: 'Easy laps: 10 min warm-up, 8 × 50 m steady with 30 s rest, 5 min easy. Great low-impact cardio and recovery.' }],
+  [/reformer|pilates/i, { name: 'Reformer / Pilates class', type: 'class', duration: 45, details: 'Core and control work. Keep it moderate if lifting the next day.' }],
+  [/spin|cycle/i, { name: 'Spin class', type: 'class', duration: 45, details: 'Conditioning. Avoid the day before a heavy leg session.' }],
+  [/yoga/i, { name: 'Yoga', type: 'mobility', duration: 45, details: 'Mobility and recovery. A gentle or yin class is ideal after hard days.' }],
+  [/hiit|circuit/i, { name: 'HIIT / circuit class', type: 'class', duration: 40, details: 'Hard conditioning. Once a week is plenty alongside lifting.' }],
+  [/group fitness/i, { name: 'Group fitness class', type: 'class', duration: 45, details: 'Pick a class you enjoy; keep leg-heavy classes away from leg days.' }],
+  [/boxing|martial/i, { name: 'Boxing / martial arts', type: 'sport', duration: 45, details: 'Skill and conditioning.' }],
+  [/running/i, { name: 'Easy run', type: 'cardio', duration: 30, details: 'Conversational pace (zone 2).' }],
+  [/rowing|ski/i, { name: 'Row / SkiErg intervals', type: 'cardio', duration: 20, details: '5 × 3 min moderate-hard, 1 min easy.' }],
+  [/sports|courts/i, { name: 'Sport', type: 'sport', duration: 60, details: 'Social game counts as cardio.' }],
+];
+function addTemplateActivities(days, a) {
+  const picks = (a.facilities || []).filter(f => f !== 'None of these');
+  const acts = ACT_TEMPLATES.filter(([re]) => picks.some(p => re.test(p))).map(([, x]) => ({ ...x }));
+  if (/sauna/i.test(picks.join())) days.forEach(d => { if (d.exercises.length) d.cardio = [d.cardio, 'Optional sauna after'].filter(Boolean).join(' · '); });
+  // Classes the user pinned to a day in their note, e.g. "Reformer Tue 6pm, swim squad Thu"
+  const DAYRE = [/\bmon/i, /\btue/i, /\bwed/i, /\bthu/i, /\bfri/i, /\bsat/i, /\bsun/i];
+  let pinned = 0;
+  for (const seg of (a.classes || '').split(/[,;\n]+/).map(x => x.trim()).filter(Boolean)) {
+    const di = DAYRE.findIndex(re => re.test(seg));
+    if (di < 0) continue;
+    const tpl = ACT_TEMPLATES.find(([re]) => re.test(seg));
+    const act = tpl ? { ...tpl[1], details: `${seg}. ${tpl[1].details}` } : { name: seg.replace(/\b(mon|tue|wed|thu|fri|sat|sun)\w*\b.*$/i, '').trim() || seg, type: 'class', duration: 45, details: seg };
+    days[di].activities.push(act);
+    if (!days[di].exercises.length) { days[di].title = act.name; days[di].cardio = ''; }
+    pinned++;
+    const k = acts.findIndex(x => x.name === act.name);
+    if (k >= 0) acts.splice(k, 1);
+  }
+  if (!acts.length) return days;
+  const want = Math.max(0, (/3\+/.test(a.cardio || '') ? 3 : /None|steps/i.test(a.cardio || '') ? 1 : 2) - pinned);
+  const avail = new Set(a.days || []);
+  const free = d => !d.activities.length;
+  // Prefer available non-lifting days, then any non-lifting day, then lifting days (as a short add-on)
+  const order = [...days.filter(d => free(d) && !d.exercises.length && avail.has(d.day)), ...days.filter(d => free(d) && !d.exercises.length && !avail.has(d.day)), ...days.filter(d => free(d) && d.exercises.length)];
+  order.slice(0, Math.min(want, acts.length)).forEach((d, i) => {
+    const act = acts[i % acts.length];
+    d.activities.push(act);
+    if (!d.exercises.length) { d.title = act.name; d.cardio = ''; }
+  });
+  return days;
 }
 
 // ---------- plan view ----------
@@ -156,17 +203,43 @@ function planView() {
   const p = S.training.plan, ti = weekdayIdx(today());
   let html = `<div class="card yellow hero"><div class="eyebrow">Your plan</div><h2>${esc(p.name)}</h2><p style="max-width:66%">${esc(p.summary)}</p>${blob('var(--cream)', 3)}</div><div class="card">
     <details><summary>Progression &amp; deload</summary><p>${esc(p.progression)}</p><p>${esc(p.deload)}</p></details>
-    <div class="row wrap" style="margin-top:10px"><button class="btn sm ${checkinDue() ? 'primary' : ''}" data-act="checkin">Weekly check-in${checkinDue() ? ' (due)' : ''}</button><button class="btn sm" data-act="startQ">Redo setup</button><button class="btn sm ghost" data-act="startWorkout" data-arg="free">Empty workout</button></div></div>`;
+    <div class="row wrap" style="margin-top:10px"><button class="btn sm ${checkinDue() ? 'primary' : ''}" data-act="checkin">Weekly check-in${checkinDue() ? ' (due)' : ''}</button><button class="btn sm" data-act="startQ">Redo setup</button><button class="btn sm ghost" data-act="startWorkout" data-arg="free">Empty workout</button><button class="btn sm ghost" data-act="logActivity" data-arg="free">Log activity</button></div></div>`;
   p.days.forEach((d, i) => {
     html += `<div class="card day-card ${i === ti ? 'today' : ''}"><h2><span class="row"><span class="tag" style="background:var(--${PASTELS[i % 4]});color:#111">${d.day}</span>${esc(d.title)} ${i === ti ? '<span class="tag accent">Today</span>' : ''}</span>
       <span class="row">${d.exercises.length ? `<button class="btn sm primary" data-act="startWorkout" data-arg="${i}">Start</button>` : ''}<button class="btn sm ghost" data-act="editDay" data-arg="${i}">Edit</button></span></h2>
       ${d.focus ? `<div class="small muted">${esc(d.focus)}</div>` : ''}
       ${d.exercises.length ? `<ul class="list">${d.exercises.map(e => `<li><div class="grow"><div>${esc(e.name)}</div><div class="meta">${e.sets} × ${esc(e.reps)}${e.rir ? ` @ ${esc(e.rir)} RIR` : ''} · rest ${e.rest}s${e.notes ? ' · ' + esc(e.notes) : ''}</div></div></li>`).join('')}</ul>` : ''}
+      ${activityList(d, i)}
       ${d.cardio ? `<div class="small muted" style="margin-top:6px">🏃 ${esc(d.cardio)}</div>` : ''}</div>`;
   });
   return html;
 }
 A.trainSub = k => { ui.trainSub = k; render(); };
+
+const ACT_ICON = { swim: '🏊', class: '🧘', cardio: '🏃', mobility: '🤸', sport: '🎾', recovery: '🧖' };
+function activityList(d, di) {
+  if (!d.activities?.length) return '';
+  const doneToday = di === weekdayIdx(today()) ? S.workouts.filter(w => w.date === today() && w.activity).map(w => w.title.toLowerCase()) : [];
+  return `<ul class="list" style="margin-top:4px">${d.activities.map((x, ai) => `<li><span style="font-size:20px">${ACT_ICON[x.type] || '✨'}</span><div class="grow"><div>${esc(x.name)} <span class="muted small">· ${x.duration} min</span></div>${x.details ? `<div class="meta">${esc(x.details)}</div>` : ''}</div>
+    ${doneToday.includes(x.name.toLowerCase()) ? '<span class="tag good">Done ✓</span>' : `<button class="btn sm" data-act="logActivity" data-arg="${di}:${ai}">Log</button>`}</li>`).join('')}</ul>`;
+}
+A.logActivity = arg => {
+  const [di, ai] = (arg || 'free').split(':');
+  const x = di === 'free' ? { name: '', duration: 45 } : S.training.plan.days[+di].activities[+ai];
+  openModal(`<h2>Log activity<button class="x" data-act="close">×</button></h2><form data-form="saveActivity">
+    <label class="f"><span>Activity</span><input type="text" name="name" value="${esc(x.name)}" placeholder="e.g. Swim, Reformer class" list="actlist" required></label>
+    <datalist id="actlist">${ACT_TEMPLATES.map(([, t]) => `<option value="${esc(t.name)}">`).join('')}</datalist>
+    <div class="grid2"><label class="f"><span>Minutes</span><input type="number" name="min" value="${x.duration}" inputmode="numeric"></label><label class="f"><span>Distance (optional)</span><input type="text" name="dist" placeholder="e.g. 1.2 km"></label></div>
+    <label class="f"><span>Effort (1 easy – 10 max)</span><div class="chips">${[2, 4, 6, 8, 10].map(n => `<button type="button" class="chip ${n === 6 ? 'on' : ''}" data-act="scale" data-arg="rpe:${n}">${n}</button>`).join('')}</div><input type="hidden" name="rpe" value="6"></label>
+    <label class="f"><span>Date</span><input type="date" name="date" value="${today()}" max="${today()}"></label>
+    <label class="f"><span>Notes</span><input type="text" name="notes"></label>
+    <button class="btn primary block">Save</button></form>`);
+};
+F.saveActivity = d => {
+  const now = Date.now();
+  S.workouts.push({ id: uid(), date: d.date || today(), title: d.name.trim(), activity: true, durationMin: r0(num(d.min)), distance: d.dist, rpe: num(d.rpe), notes: d.notes, exercises: [], startedAt: now, finishedAt: now });
+  save(); closeModal(); toast(`${d.name} logged`); render();
+};
 
 A.editDay = i => {
   const d = S.training.plan.days[+i];
@@ -175,7 +248,9 @@ A.editDay = i => {
     <label class="f"><span>Cardio / notes</span><input type="text" name="cardio" value="${esc(d.cardio)}"></label>
     <p class="small muted">One exercise per line: <b>Name | sets | reps | rest s | muscle</b></p>
     <textarea name="ex" rows="8" style="font-size:14px">${esc(d.exercises.map(e => [e.name, e.sets, e.reps, e.rest, e.muscle].join(' | ')).join('\n'))}</textarea>
-    <p class="small muted">Leave empty to make it a rest day.</p><button class="btn primary block">Save</button></form>`);
+    <p class="small muted">Activities / classes, one per line: <b>Name | minutes | details</b></p>
+    <textarea name="acts" rows="3" style="font-size:14px">${esc((d.activities || []).map(x => [x.name, x.duration, x.details].join(' | ')).join('\n'))}</textarea>
+    <p class="small muted">Leave both empty to make it a rest day.</p><button class="btn primary block">Save</button></form>`);
 };
 F.saveDay = d => {
   const day = S.training.plan.days[+d.i];
@@ -186,7 +261,12 @@ F.saveDay = d => {
     const o = old[name.toLowerCase()] || {};
     return { name, sets: Math.max(1, r0(num(sets, 3))), reps: reps || '8-12', rest: r0(num(rest, 90)), muscle: (muscle || o.muscle || '').toLowerCase(), rir: o.rir || '', notes: o.notes || '' };
   });
-  if (!day.exercises.length) day.title = d.title || 'Rest';
+  const oldActs = Object.fromEntries((day.activities || []).map(x => [x.name.toLowerCase(), x]));
+  day.activities = (d.acts || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+    const [name, min, ...rest] = l.split('|').map(s => (s || '').trim());
+    return { name, type: oldActs[name.toLowerCase()]?.type || 'cardio', duration: r0(num(min, 45)), details: rest.join(' | ') };
+  });
+  if (!day.exercises.length && !day.activities.length) day.title = d.title || 'Rest';
   save(); closeModal(); render();
 };
 
@@ -299,7 +379,7 @@ function weekView() {
   const ws = weekStart(today()), we = addDays(ws, 6);
   const wk = S.workouts.filter(w => w.date >= ws && w.date <= we);
   const plan = S.training.plan;
-  const planned = plan.days.filter(d => d.exercises.length).length;
+  const planned = plan.days.filter(d => d.exercises.length || d.activities?.length).length;
   const sets = {}, plannedSets = {};
   let volume = 0;
   wk.forEach(w => w.exercises.forEach(e => {
@@ -315,7 +395,7 @@ function weekView() {
     <div class="stat"><div class="v num">${wk.length}/${planned}</div><div class="l">sessions</div></div>
     <div class="stat"><div class="v num">${Object.values(sets).reduce((a, b) => a + b, 0)}</div><div class="l">hard sets</div></div>
     <div class="stat"><div class="v num">${volume >= 1000 ? r1(volume / 1000) + 't' : r0(volume) + 'kg'}</div><div class="l">volume</div></div></div>
-    <div class="row" style="gap:4px;margin-top:12px">${DAYS.map((d, i) => { const k = addDays(ws, i), did = wk.some(w => w.date === k), pl = plan.days[i].exercises.length; return `<div class="grow" style="text-align:center"><div class="small muted">${d[0]}</div><div style="height:28px;border-radius:6px;margin-top:2px;background:${did ? 'var(--mint)' : pl ? 'var(--surface-2)' : 'transparent'};border:1.5px ${pl && !did ? 'solid' : 'dashed'} var(--border);border-radius:999px"></div></div>`; }).join('')}</div>
+    <div class="row" style="gap:4px;margin-top:12px">${DAYS.map((d, i) => { const k = addDays(ws, i), did = wk.some(w => w.date === k), pl = plan.days[i].exercises.length || plan.days[i].activities?.length; return `<div class="grow" style="text-align:center"><div class="small muted">${d[0]}</div><div style="height:28px;border-radius:6px;margin-top:2px;background:${did ? 'var(--mint)' : pl ? 'var(--surface-2)' : 'transparent'};border:1.5px ${pl && !did ? 'solid' : 'dashed'} var(--border);border-radius:999px"></div></div>`; }).join('')}</div>
     <div class="legend"><span><i class="dot" style="background:var(--mint)"></i>done</span><span><i class="dot" style="background:var(--surface-2);border:1px solid var(--border)"></i>planned</span></div></div>`;
   html += `<div class="card"><h2>Sets per muscle <span class="small muted">done / planned</span></h2>${muscles.length ? barRows(muscles.map(m => ({ label: m[0].toUpperCase() + m.slice(1), value: sets[m] || 0, target: plannedSets[m] || 0 })), 'var(--ink)') : '<div class="small muted">No sets yet.</div>'}
     <p class="small muted">Most people grow well on roughly 10–20 hard sets per muscle per week.</p></div>`;
@@ -336,13 +416,13 @@ function historyView() {
   return `<div class="card"><ul class="list">${ws.slice(0, 60).map(w => {
     const sets = w.exercises.reduce((a, e) => a + e.sets.filter(s => s.done).length, 0);
     const vol = w.exercises.reduce((a, e) => a + e.sets.filter(s => s.done).reduce((b, s) => b + num(s.w) * num(s.r), 0), 0);
-    return `<li data-act="viewWorkout" data-arg="${w.id}"><div class="grow"><div>${esc(w.title)}</div><div class="meta">${fmtDate(w.date)} · ${sets} sets · ${r0(vol)} kg · ${w.durationMin || '?'} min</div></div><span class="muted">›</span></li>`;
+    return `<li data-act="viewWorkout" data-arg="${w.id}"><div class="grow"><div>${w.activity ? '✨ ' : ''}${esc(w.title)}</div><div class="meta">${fmtDate(w.date)} · ${w.activity ? `${w.durationMin} min${w.distance ? ' · ' + esc(w.distance) : ''} · effort ${w.rpe}/10` : `${sets} sets · ${r0(vol)} kg · ${w.durationMin || '?'} min`}</div></div><span class="muted">›</span></li>`;
   }).join('')}</ul></div>`;
 }
 A.viewWorkout = id => {
   const w = S.workouts.find(x => x.id === id);
   if (!w) return;
-  openModal(`<h2>${esc(w.title)}<button class="x" data-act="close">×</button></h2><div class="small muted">${fmtDate(w.date)} · ${w.durationMin || '?'} min</div>
+  openModal(`<h2>${esc(w.title)}<button class="x" data-act="close">×</button></h2><div class="small muted">${fmtDate(w.date)} · ${w.durationMin || '?'} min${w.activity ? ` · effort ${w.rpe}/10${w.distance ? ' · ' + esc(w.distance) : ''}` : ''}</div>
     ${w.exercises.map(e => `<h3>${esc(e.name)}</h3><div class="small num">${e.sets.filter(s => s.done).map(s => `${s.w} kg × ${s.r}`).join(' · ') || 'no sets'}</div>`).join('')}
     ${w.notes ? `<h3>Notes</h3><p class="small">${esc(w.notes)}</p>` : ''}<hr><button class="btn danger block" data-act="delWorkout" data-arg="${w.id}">Delete workout</button>`);
 };
@@ -409,7 +489,7 @@ F.checkin = async (d, form) => {
     aiBusyButton(btn, true);
     try {
       const since = addDays(today(), -14);
-      const log = S.workouts.filter(w => w.date >= since).map(w => `${w.date} ${w.title}: ` + w.exercises.map(e => `${e.name} ${e.sets.filter(s => s.done).map(s => `${s.w}x${s.r}`).join(',')}`).join('; ')).join('\n');
+      const log = S.workouts.filter(w => w.date >= since).map(w => w.activity ? `${w.date} activity: ${w.title} ${w.durationMin} min, effort ${w.rpe}/10${w.distance ? ', ' + w.distance : ''}` : `${w.date} ${w.title}: ` + w.exercises.map(e => `${e.name} ${e.sets.filter(s => s.done).map(s => `${s.w}x${s.r}`).join(',')}`).join('; ')).join('\n');
       const system = `You are the user's strength coach doing a weekly check-in. Adjust the plan only as much as the feedback warrants (small, specific changes; keep what works). Apply progressive overload guidance based on the logged sets. ${userContext()}`;
       const user = `Original questionnaire: ${JSON.stringify(S.training.questionnaire)}\nCurrent plan: ${JSON.stringify(S.training.plan)}\nLast 2 weeks of logged training:\n${log || 'none logged'}\n${recoverySummary()}\nCheck-in answers: ${JSON.stringify(d)}\n\nReturn JSON: {"review": "3-6 sentences of honest, specific feedback and what to focus on this week, incl. target weights where logs allow", "changes": ["each concrete change you made"], "plan": <full updated plan in this shape: ${PLAN_SHAPE}>}. If no changes are needed, return the plan unchanged and an empty changes array.`;
       const out = await aiJSON(system, [{ role: 'user', content: user }], { effort: 'medium', maxTokens: 16000 });
