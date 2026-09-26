@@ -5,9 +5,9 @@ V.food = () => {
   const k = ui.foodDate || (ui.foodDate = today());
   const t = dayTotals(k), T = S.targets;
   let html = `<div class="row between" style="margin-bottom:10px">
-    <button class="btn sm" data-act="foodDay" data-arg="-1">‹</button>
+    <button class="btn sm round-btn" data-act="foodDay" data-arg="-1">‹</button>
     <div style="text-align:center"><b>${k === today() ? 'Today' : fmtDate(k)}</b><div class="small muted num">${r0(t.kcal)} / ${T.kcal} kcal · P ${r0(t.p)} · C ${r0(t.c)} · F ${r0(t.f)}</div></div>
-    <button class="btn sm" data-act="foodDay" data-arg="1" ${k >= today() ? 'disabled' : ''}>›</button></div>
+    <button class="btn sm round-btn" data-act="foodDay" data-arg="1" ${k >= today() ? 'disabled' : ''}>›</button></div>
     <div class="seg"><button class="${ui.foodSub === 'log' ? 'on' : ''}" data-act="foodSub" data-arg="log">Food log</button><button class="${ui.foodSub === 'ai' ? 'on' : ''}" data-act="foodSub" data-arg="ai">Ask AI</button></div>`;
   html += ui.foodSub === 'ai' ? foodChat(k) : foodLog(k);
   return html;
@@ -21,14 +21,15 @@ function foodLog(k) {
   // quick add
   const recents = recentFoods();
   if (S.savedFoods.length || recents.length) {
-    html += `<div class="card"><h2>Quick add</h2><div class="chips">${S.savedFoods.map((f, i) => `<button class="chip" data-act="quickFood" data-arg="s${i}">★ ${esc(f.name)}</button>`).join('')}${recents.map((f, i) => `<button class="chip" data-act="quickFood" data-arg="r${i}">${esc(f.name)}</button>`).join('')}</div></div>`;
+    html += `<div class="card"><h2>Quick add</h2><div class="chips scroller">${S.savedFoods.map((f, i) => `<button class="chip tint" data-act="quickFood" data-arg="s${i}">★ ${esc(f.name)}</button>`).join('')}${recents.map((f, i) => `<button class="chip" data-act="quickFood" data-arg="r${i}">${esc(f.name)}</button>`).join('')}</div></div>`;
   }
 
+  const mealColor = { Breakfast: 'yellow', Lunch: 'mint', Dinner: 'blue', Snacks: 'pink' };
   for (const m of MEALS) {
     const items = dayFood(k).filter(e => e.meal === m);
     const kc = items.reduce((a, e) => a + num(e.kcal), 0);
-    html += `<div class="card"><h2>${m} <span class="row"><span class="small muted num">${r0(kc)} kcal</span><button class="btn sm" data-act="addFood" data-arg="${m}">+ Add</button></span></h2>
-      ${items.length ? `<ul class="list">${items.map(e => `<li><div class="grow" data-act="editFood" data-arg="${e.id}"><div>${esc(e.name)}${e.qty ? ` <span class="muted small">(${esc(e.qty)})</span>` : ''}</div><div class="meta num">${e.kcal} kcal · P ${e.p} · C ${e.c} · F ${e.f}</div></div><button class="x" data-act="delFood" data-arg="${e.id}" aria-label="Delete">×</button></li>`).join('')}</ul>` : '<div class="small muted">Nothing logged.</div>'}</div>`;
+    html += `<div class="card"><h2><span class="row"><i class="dot" style="background:var(--${mealColor[m]});width:14px;height:14px"></i>${m}</span> <span class="row"><span class="small muted num">${r0(kc)} kcal</span><button class="btn sm" data-act="addFood" data-arg="${m}">+ Add</button></span></h2>
+      ${items.length ? `<ul class="list">${items.map(e => `<li><span class="bullet" style="background:var(--${mealColor[m]})"></span><div class="grow" data-act="editFood" data-arg="${e.id}"><div>${esc(e.name)}${e.qty ? ` <span class="muted small">(${esc(e.qty)})</span>` : ''}</div><div class="meta num">${e.kcal} kcal · P ${e.p} · C ${e.c} · F ${e.f}</div></div><button class="x" data-act="delFood" data-arg="${e.id}" aria-label="Delete">×</button></li>`).join('')}</ul>` : '<div class="small muted">Nothing yet.</div>'}</div>`;
   }
 
   // last 7 days
@@ -36,7 +37,7 @@ function foodLog(k) {
   for (let i = 6; i >= 0; i--) { const d = addDays(k, -i); pts.push({ label: fmtDate(d, { weekday: 'short' }), value: dayTotals(d).kcal }); }
   const max = Math.max(T.kcal * 1.2, ...pts.map(p => p.value));
   html += `<div class="card"><h2>Last 7 days</h2><svg viewBox="0 0 320 140" style="width:100%">
-    ${pts.map((p, i) => { const h = (p.value / max) * 100, x = 10 + i * 44; return `<rect x="${x}" y="${110 - h}" width="32" height="${Math.max(h, 0)}" rx="4" fill="var(--accent)"><title>${p.label}: ${r0(p.value)} kcal</title></rect><text x="${x + 16}" y="128" text-anchor="middle" font-size="11" fill="var(--muted)" stroke="none">${p.label}</text>${p.value ? `<text x="${x + 16}" y="${105 - h}" text-anchor="middle" font-size="10" fill="var(--text-2)" stroke="none">${r0(p.value)}</text>` : ''}`; }).join('')}
+    ${pts.map((p, i) => { const h = (p.value / max) * 100, x = 10 + i * 44; return `<rect x="${x}" y="${110 - h}" width="32" height="${Math.max(h, 0)}" rx="8" fill="var(--${['yellow', 'pink', 'mint', 'blue'][i % 4]})"><title>${p.label}: ${r0(p.value)} kcal</title></rect><text x="${x + 16}" y="128" text-anchor="middle" font-size="11" fill="var(--muted)" stroke="none">${p.label}</text>${p.value ? `<text x="${x + 16}" y="${105 - h}" text-anchor="middle" font-size="10" fill="var(--text-2)" stroke="none">${r0(p.value)}</text>` : ''}`; }).join('')}
     <line x1="4" x2="316" y1="${110 - (T.kcal / max) * 100}" y2="${110 - (T.kcal / max) * 100}" stroke="var(--muted)" stroke-dasharray="4 4" stroke-width="1.5"/></svg>
     <div class="legend"><span>- - target ${T.kcal} kcal</span><span>7-day avg ${r0(pts.reduce((a, p) => a + p.value, 0) / 7)} kcal</span></div></div>`;
   return html;
@@ -102,21 +103,21 @@ function foodChat(k) {
   if (!aiReady()) html += `<div class="card"><p class="small">Add an Anthropic or OpenAI API key in Settings to chat about macros and log meals by describing them (or snapping a photo).</p><button class="btn block" data-act="go" data-arg="settings">Open settings</button></div>`;
   html += `<div class="chat" id="chat">`;
   if (!S.chat.length) {
-    html += `<div class="msg assistant">Tell me what you ate and I'll work out the macros and log it, e.g. "2 eggs on sourdough with avo, flat white with full cream". You can also send a photo of your plate, or ask things like "how much protein do I have left?"</div>`;
+    html += `<div class="bot">${blob('var(--yellow)', 0)}<div class="msg assistant">Tell me what you ate and I'll work out the macros and log it, e.g. "2 eggs on sourdough with avo, flat white with full cream". You can also send a photo of your plate, or ask things like "how much protein do I have left?"</div></div>`;
   }
   S.chat.forEach((m, i) => {
     if (m.role === 'user') html += `<div class="msg user">${m.image ? '<div class="small">📷 photo</div>' : ''}${esc(m.text)}</div>`;
     else if (m.role === 'error') html += `<div class="msg error small">${esc(m.text)}</div>`;
-    else html += `<div class="msg assistant">${esc(m.text)}${m.items?.length ? proposal(m, i) : ''}</div>`;
+    else html += `<div class="bot">${blob('var(--yellow)', 0)}<div class="msg assistant">${esc(m.text)}${m.items?.length ? proposal(m, i) : ''}</div></div>`;
   });
-  if (ui.busy === 'chat') html += `<div class="msg assistant"><span class="spinner"></span></div>`;
+  if (ui.busy === 'chat') html += `<div class="bot">${blob('var(--yellow)', 0)}<div class="msg assistant"><span class="spinner"></span></div></div>`;
   html += `</div>
-  <div class="chips" style="margin-bottom:8px">${['How much protein do I have left today?', 'High-protein snack under 300 kcal', 'Is my macro split right for my goal?'].map(q => `<button class="chip" data-act="chatQuick" data-arg="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+  <div class="chips scroller" style="margin-bottom:8px">${['How much protein do I have left today?', 'High-protein snack under 300 kcal', 'Is my macro split right for my goal?'].map(q => `<button class="chip tint" data-act="chatQuick" data-arg="${esc(q)}">${esc(q)}</button>`).join('')}</div>
   <form class="composer" data-form="chat">
     ${ui.pendingImage ? `<div class="row small" style="margin-bottom:6px"><img src="${ui.pendingImage}" style="width:48px;height:48px;object-fit:cover;border-radius:6px"> Photo attached <button type="button" class="x" data-act="clearImage">×</button></div>` : ''}
-    <div class="row"><label class="btn" style="padding:9px 11px" aria-label="Attach photo">📷<input type="file" accept="image/*" capture="environment" data-input="chatImage" hidden></label>
+    <div class="row"><label class="btn round-btn" aria-label="Attach photo">📷<input type="file" accept="image/*" capture="environment" data-input="chatImage" hidden></label>
     <textarea name="text" class="grow" rows="1" placeholder="What did you eat?"></textarea>
-    <button class="btn primary" ${ui.busy ? 'disabled' : ''}>Send</button></div>
+    <button class="btn primary sm round-btn" ${ui.busy ? 'disabled' : ''} aria-label="Send"><svg viewBox="0 0 24 24" width="20" height="20" stroke-width="2.6"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button></div>
     <div class="row between small muted" style="margin-top:4px"><span>Logs to: ${k === today() ? 'today' : fmtDate(k)}</span>${S.chat.length ? '<button type="button" class="btn sm ghost" data-act="clearChat">Clear chat</button>' : ''}</div>
   </form>`;
   return html;

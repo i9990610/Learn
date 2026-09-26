@@ -13,7 +13,7 @@ A.mealSub = k => { ui.mealSub = k; render(); };
 function prefsView() {
   const p = S.mealPrefs || { diet: 'Omnivore', mealsPerDay: '3 meals + 1 snack', cook: 'Moderate (30 min)', budget: 'Moderate', avoid: '', likes: '', notes: '' };
   const sel = (name, opts) => `<select name="${name}">${opts.map(o => `<option ${p[name] === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
-  return `<div class="card"><h2>Meal plan preferences</h2><form data-form="mealPrefs">
+  return `<div class="card mint hero"><div class="eyebrow">Meal plan</div><h2>What do you like to eat?</h2><p>A week of meals built around your targets.</p>${blob('var(--cream)', 1)}</div><div class="card"><form data-form="mealPrefs">
     <p class="small muted">Plans are built to hit your targets: ${S.targets.kcal} kcal, P ${S.targets.protein} g, C ${S.targets.carbs} g, F ${S.targets.fat} g.</p>
     <label class="f"><span>Diet</span>${sel('diet', ['Omnivore', 'Pescatarian', 'Vegetarian', 'Vegan', 'Halal', 'Low FODMAP', 'Gluten free'])}</label>
     <div class="grid2"><label class="f"><span>Meals per day</span>${sel('mealsPerDay', ['3 meals', '3 meals + 1 snack', '3 meals + 2 snacks', '2 meals + 1 snack'])}</label>
@@ -59,17 +59,17 @@ function mealPlanView() {
   const di = ui.mealDay ?? (ui.mealDay = weekdayIdx(today()));
   const day = S.mealPlan.days[di], T = S.targets;
   const tot = day.meals.reduce((a, m) => ({ kcal: a.kcal + m.kcal, p: a.p + m.p, c: a.c + m.c, f: a.f + m.f }), { kcal: 0, p: 0, c: 0, f: 0 });
-  let html = `<div class="chips" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto">${DAYS.map((d, i) => `<button class="chip ${i === di ? 'on' : ''}" data-act="mealDay" data-arg="${i}">${d}${i === weekdayIdx(today()) ? ' •' : ''}</button>`).join('')}</div>
+  let html = `<div class="chips scroller" style="margin-bottom:12px">${DAYS.map((d, i) => `<button class="chip ${i === di ? 'on' : ''}" data-act="mealDay" data-arg="${i}">${d}${i === weekdayIdx(today()) ? ' •' : ''}</button>`).join('')}</div>
     <div class="card"><div class="row between"><b>${day.day} total</b><span class="num">${r0(tot.kcal)} / ${T.kcal} kcal</span></div><div style="height:8px"></div>
     ${macroBar('Protein', tot.p, T.protein, 'var(--protein)')}${macroBar('Carbs', tot.c, T.carbs, 'var(--carbs)')}${macroBar('Fat', tot.f, T.fat, 'var(--fat)')}</div>`;
   const order = m => SLOTS.indexOf(m.slot);
   [...day.meals].sort((a, b) => order(a) - order(b)).forEach(m => {
-    html += `<div class="card"><div class="row between"><span class="tag">${m.slot}</span><span class="small muted">${esc(m.prep)}</span></div>
+    html += `<div class="card"><div class="row between"><span class="tag ${m.slot}">${m.slot}</span><span class="small muted">${esc(m.prep)}</span></div>
       <h2 style="margin:8px 0 2px">${esc(m.name)}</h2><div class="small muted num">${m.kcal} kcal · P ${m.p} · C ${m.c} · F ${m.f}</div>
       ${m.ingredients.length || m.method ? `<details><summary>Ingredients &amp; method</summary><ul>${m.ingredients.map(x => `<li>${x.qty ? r1(x.qty) + ' ' + esc(x.unit) + ' ' : ''}${esc(x.item)}</li>`).join('')}</ul>${m.method ? `<p>${esc(m.method)}</p>` : ''}</details>` : ''}
       <div class="row wrap" style="margin-top:10px"><button class="btn sm primary" data-act="logMeal" data-arg="${m.id}">Log to today</button>${aiReady() ? `<button class="btn sm" data-act="swapMeal" data-arg="${m.id}">Swap</button>` : ''}<button class="btn sm ghost" data-act="editMeal" data-arg="${m.id}">Edit</button><button class="btn sm ghost danger" data-act="delMeal" data-arg="${m.id}">Delete</button></div></div>`;
   });
-  if (!day.meals.length) html += '<div class="empty">No meals planned for this day.</div>';
+  if (!day.meals.length) html += emptyState('No meals planned for this day.', 'var(--yellow)', 0);
   html += `<div class="row wrap"><button class="btn" data-act="addMeal">+ Add meal</button><button class="btn" data-act="copyDay">Copy day to…</button><div class="grow"></div><button class="btn ghost" data-act="editPrefs">${aiReady() ? 'New plan' : 'Preferences'}</button></div>`;
   return html;
 }
@@ -146,7 +146,7 @@ function groceryView() {
   let html = `<div class="card"><div class="row wrap"><button class="btn primary" data-act="buildGrocery" ${S.mealPlan ? '' : 'disabled'}>${g.items.length ? 'Rebuild' : 'Build'} from meal plan</button><button class="btn" data-act="shareGrocery" ${g.items.length ? '' : 'disabled'}>Share / copy</button><button class="btn ghost" data-act="clearChecked" ${g.items.some(i => i.checked) ? '' : 'disabled'}>Clear ticked</button></div>
     ${g.builtAt ? `<p class="small muted">Built ${fmtDate(g.builtAt)} for 7 days of meals. Rebuilding keeps items you added yourself.</p>` : ''}
     <form data-form="addGrocery" class="row" style="margin-top:8px"><input type="text" name="name" placeholder="Add item" required><button class="btn">Add</button></form></div>`;
-  if (!g.items.length) return html + `<div class="empty">${S.mealPlan ? 'Build the list from your meal plan, or add items.' : 'Create a meal plan first, or add items manually.'}</div>`;
+  if (!g.items.length) return html + `<div class="empty">${blob('var(--mint)', 2)}${S.mealPlan ? 'Build the list from your meal plan, or add items.' : 'Create a meal plan first, or add items manually.'}</div>`;
   for (const cat of CATS) {
     const items = g.items.map((x, i) => ({ ...x, i })).filter(x => x.cat === cat);
     if (!items.length) continue;

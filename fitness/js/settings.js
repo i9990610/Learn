@@ -6,7 +6,8 @@ const ACTIVITY = [[1.2, 'Sedentary (desk, little exercise)'], [1.375, 'Light (1�
 V.settings = () => {
   const p = S.profile, t = S.targets, a = S.ai, w = latestWeight();
   const sel = (name, opts, val) => `<select name="${name}">${opts.map(([v, l]) => `<option value="${v}" ${String(v) === String(val) ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
-  return `<div class="card"><h2>Profile</h2><form data-form="profile">
+  return `<div class="card"><h2>Look</h2><div class="seg" style="margin:0;box-shadow:none;background:var(--surface-2)">${[['light', 'Light'], ['dark', 'Dark'], ['system', 'Match phone']].map(([v, l]) => `<button class="${(S.theme || 'light') === v ? 'on' : ''}" data-act="theme" data-arg="${v}">${l}</button>`).join('')}</div></div>
+  <div class="card"><h2>Profile</h2><form data-form="profile">
     <div class="grid2"><label class="f"><span>Sex</span>${sel('sex', [['female', 'Female'], ['male', 'Male']], p.sex)}</label><label class="f"><span>Age</span><input type="number" name="age" value="${p.age}" inputmode="numeric"></label></div>
     <div class="grid2"><label class="f"><span>Height (cm)</span><input type="number" name="heightCm" value="${p.heightCm}" inputmode="decimal"></label><label class="f"><span>Weight (kg)</span><input type="number" step="0.1" name="weight" value="${w ?? ''}" inputmode="decimal" placeholder="log in Body"></label></div>
     <label class="f"><span>Activity</span>${sel('activity', ACTIVITY, p.activity)}</label>
@@ -52,6 +53,7 @@ F.profile = d => {
   save(); render();
   toast(`TDEE ≈ ${r0(tdee)} kcal → target ${kcal} kcal`, 4000);
 };
+A.theme = v => { S.theme = v; save(); applyTheme(); render(); };
 F.targets = d => { S.targets = { kcal: num(d.kcal), protein: num(d.protein), carbs: num(d.carbs), fat: num(d.fat), waterMl: num(d.waterMl) }; save(); toast('Targets saved'); render(); };
 F.ai = d => { Object.assign(S.ai, d); save(); toast('AI settings saved'); };
 A.testAI = async (_, btn) => {

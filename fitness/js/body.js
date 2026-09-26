@@ -13,10 +13,10 @@ function weightView() {
   const rate = weightRate(28), gw = num(S.profile.goalWeight, 0);
   let html = `<div class="card"><form data-form="weight"><div class="grid2"><label class="f"><span>Weight (kg)</span><input type="number" step="0.1" inputmode="decimal" name="kg" required></label><label class="f"><span>Date</span><input type="date" name="date" value="${today()}" max="${today()}"></label></div><button class="btn primary block">Save weight</button></form></div>`;
   html += `<div class="card"><div class="grid2">
-    <div class="stat"><div class="v num">${cur ?? '–'} kg</div><div class="l">latest</div></div>
-    <div class="stat"><div class="v num">${avg7 ? r1(avg7) : '–'} kg</div><div class="l">7-day average${avg7 && avgPrev ? ` (${avg7 - avgPrev >= 0 ? '+' : ''}${r1(avg7 - avgPrev)} vs last wk)` : ''}</div></div>
-    <div class="stat"><div class="v num">${rate != null ? (rate >= 0 ? '+' : '') + r1(rate) : '–'} kg</div><div class="l">per week (4-wk trend)</div></div>
-    <div class="stat"><div class="v num">${gw && cur ? r1(cur - gw) + ' kg' : '–'}</div><div class="l">${gw ? `to goal (${gw} kg)` : 'set a goal weight in Settings'}</div></div></div>
+    <div class="stat yellow"><div class="v num">${cur ?? '–'} kg</div><div class="l">latest</div></div>
+    <div class="stat blue"><div class="v num">${avg7 ? r1(avg7) : '–'} kg</div><div class="l">7-day average${avg7 && avgPrev ? ` (${avg7 - avgPrev >= 0 ? '+' : ''}${r1(avg7 - avgPrev)} vs last wk)` : ''}</div></div>
+    <div class="stat mint"><div class="v num">${rate != null ? (rate >= 0 ? '+' : '') + r1(rate) : '–'} kg</div><div class="l">per week (4-wk trend)</div></div>
+    <div class="stat pink"><div class="v num">${gw && cur ? r1(cur - gw) + ' kg' : '–'}</div><div class="l">${gw ? `to goal (${gw} kg)` : 'set a goal weight in Settings'}</div></div></div>
     ${rate != null && S.profile.goal !== 'maintain' ? `<p class="small muted" style="margin-top:8px">${rateAdvice(rate)}</p>` : ''}</div>`;
   // chart: raw weigh-ins as dots, 7-day rolling average as the line
   const from = ui.chartRange ? addDays(today(), -ui.chartRange) : '0000';
@@ -24,8 +24,8 @@ function weightView() {
   const avgPts = pts.map(w => ({ x: parseKey(w.date).getTime(), y: r1(avgWeight(w.date, 7)) }));
   html += `<div class="card"><h2>Trend <span class="chips">${[[30, '30d'], [90, '90d'], [365, '1y'], [0, 'All']].map(([v, l]) => `<button class="chip ${ui.chartRange === v ? 'on' : ''}" data-act="range" data-arg="${v}">${l}</button>`).join('')}</span></h2>
     ${lineChart('weight', [
-      { name: 'Weigh-in', color: 'var(--muted)', points: pts.map(w => ({ x: parseKey(w.date).getTime(), y: w.kg })), dots: true, line: false, dotR: 3 },
-      { name: '7-day average', color: 'var(--accent)', points: avgPts, width: 2.5 },
+      { name: 'Weigh-in', color: 'var(--pink)', points: pts.map(w => ({ x: parseKey(w.date).getTime(), y: w.kg })), dots: true, line: false, dotR: 4.5 },
+      { name: '7-day average', color: 'var(--line)', points: avgPts, width: 2.5 },
     ], { unit: ' kg', target: gw || null })}</div>`;
   if (ws.length) html += `<div class="card"><h2>Entries</h2><ul class="list">${ws.slice(-30).reverse().map(w => `<li><span class="grow">${fmtDate(w.date)}</span><b class="num">${w.kg} kg</b><button class="x" data-act="delWeight" data-arg="${w.date}">×</button></li>`).join('')}</ul></div>`;
   return html;
@@ -80,7 +80,7 @@ function photosView() {
   let html = `<div class="card"><h2>Add progress photo</h2><div class="grid2"><label class="f"><span>Pose</span><select id="pose"><option>Front</option><option>Side</option><option>Back</option><option>Other</option></select></label><label class="f"><span>Date</span><input type="date" id="photoDate" value="${today()}" max="${today()}"></label></div>
     <label class="btn primary block">📷 Take or choose photo<input type="file" accept="image/*" data-input="addPhoto" hidden></label>
     <p class="small muted">Photos stay on this phone only (not in backups). Same lighting, time of day and pose each time makes comparisons useful.</p></div>`;
-  if (!photoCache.length) return html + '<div class="empty">No photos yet.</div>';
+  if (!photoCache.length) return html + emptyState('No photos yet.', 'var(--pink)', 3);
   if (ui.compare.length === 2) {
     const [a, b] = ui.compare.map(id => photoCache.find(p => p.id === id)).sort((x, y) => x.date.localeCompare(y.date));
     if (a && b) html += `<div class="card"><h2>Compare <button class="btn sm ghost" data-act="clearCompare">Close</button></h2><div class="compare"><div><img src="${a.data}" alt=""><div class="small muted">${fmtDate(a.date)} · ${esc(a.pose)}</div></div><div><img src="${b.data}" alt=""><div class="small muted">${fmtDate(b.date)} · ${esc(b.pose)}</div></div></div><p class="small muted">${daysBetween(a.date, b.date)} days apart</p></div>`;

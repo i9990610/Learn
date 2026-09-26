@@ -20,8 +20,8 @@ V.train = () => {
   if (ui.q) return questionnaireView();
   if (S.activeWorkout) return loggerView();
   if (!S.training.plan) {
-    return `<div class="card"><h2>Let's build your plan</h2><p class="muted">I'll ask ${QUESTIONS.length} quick questions about your goals, experience, schedule and equipment, then build a weekly plan around them. ${aiReady() ? 'Your AI coach will write the plan.' : 'Without an AI key a solid template is built from your answers; add a key in Settings for a fully tailored plan.'}</p>
-      <button class="btn primary block" data-act="startQ">Start</button></div>
+    return `<div class="card pink hero"><div class="eyebrow">Training</div><h2>Let's build your plan</h2><p>I'll ask ${QUESTIONS.length} quick questions about your goals, experience, schedule and equipment, then build a weekly plan around them. ${aiReady() ? 'Your AI coach will write the plan.' : 'Without an AI key a solid template is built from your answers; add a key in Settings for a fully tailored plan.'}</p>
+      <div style="margin-top:16px"><button class="btn primary" data-act="startQ">Start</button></div>${blob('var(--cream)', 2)}</div>
       <div class="card"><h2>Or just log</h2><p class="small muted">Log a session without a plan.</p><button class="btn block" data-act="startWorkout" data-arg="free">Start empty workout</button></div>`;
   }
   let html = `<div class="seg">${[['plan', 'Plan'], ['week', 'This week'], ['history', 'History'], ['progress', 'Progress']].map(([k, l]) => `<button class="${ui.trainSub === k ? 'on' : ''}" data-act="trainSub" data-arg="${k}">${l}</button>`).join('')}</div>`;
@@ -33,12 +33,12 @@ V.train = () => {
 function questionnaireView() {
   const q = QUESTIONS[ui.qStep], a = ui.q[q.id];
   let body = '';
-  if (q.type === 'one') body = `<div class="chips">${q.opts.map(o => `<button class="chip ${a === o ? 'on' : ''}" data-act="qPick" data-arg="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
+  if (q.type === 'one') body = `<div class="chips" style="gap:10px">${q.opts.map(o => `<button class="chip ${a === o ? 'on' : ''}" data-act="qPick" data-arg="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
   else if (q.type === 'many') body = `<div class="chips">${q.opts.map(o => `<button class="chip ${(a || []).includes(o) ? 'on' : ''}" data-act="qToggle" data-arg="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
   else body = `<textarea data-input="qText" placeholder="${esc(q.hint || '')}">${esc(a || '')}</textarea>`;
   const last = ui.qStep === QUESTIONS.length - 1;
   return `<div class="progress"><i style="width:${((ui.qStep + 1) / QUESTIONS.length) * 100}%"></i></div>
-    <div class="card"><div class="small muted">Question ${ui.qStep + 1} of ${QUESTIONS.length}</div><h2 style="margin-top:6px">${esc(q.q)}</h2>
+    <div class="card hero ${PASTELS[ui.qStep % 4]}" style="min-height:0;padding-bottom:26px"><div class="eyebrow">Question ${ui.qStep + 1} / ${QUESTIONS.length}</div><h2 style="max-width:70%">${esc(q.q)}</h2>${blob('var(--cream)', ui.qStep)}</div><div class="card">
     ${q.hint && q.type !== 'text' ? `<p class="small muted">${esc(q.hint)}</p>` : ''}${body}</div>
     <div class="row"><button class="btn" data-act="qBack">${ui.qStep ? 'Back' : 'Cancel'}</button><div class="grow"></div>
     ${last ? `<button class="btn primary" data-act="qFinish" id="qFinish">Build my plan</button>` : `<button class="btn primary" data-act="qNext">Next</button>`}</div>`;
@@ -154,11 +154,11 @@ function templatePlan(a) {
 // ---------- plan view ----------
 function planView() {
   const p = S.training.plan, ti = weekdayIdx(today());
-  let html = `<div class="card"><h2>${esc(p.name)}</h2><p class="small">${esc(p.summary)}</p>
+  let html = `<div class="card yellow hero"><div class="eyebrow">Your plan</div><h2>${esc(p.name)}</h2><p style="max-width:66%">${esc(p.summary)}</p>${blob('var(--cream)', 3)}</div><div class="card">
     <details><summary>Progression &amp; deload</summary><p>${esc(p.progression)}</p><p>${esc(p.deload)}</p></details>
     <div class="row wrap" style="margin-top:10px"><button class="btn sm ${checkinDue() ? 'primary' : ''}" data-act="checkin">Weekly check-in${checkinDue() ? ' (due)' : ''}</button><button class="btn sm" data-act="startQ">Redo setup</button><button class="btn sm ghost" data-act="startWorkout" data-arg="free">Empty workout</button></div></div>`;
   p.days.forEach((d, i) => {
-    html += `<div class="card day-card ${i === ti ? 'today' : ''}"><h2><span>${d.day} · ${esc(d.title)} ${i === ti ? '<span class="tag accent">Today</span>' : ''}</span>
+    html += `<div class="card day-card ${i === ti ? 'today' : ''}"><h2><span class="row"><span class="tag" style="background:var(--${PASTELS[i % 4]});color:#111">${d.day}</span>${esc(d.title)} ${i === ti ? '<span class="tag accent">Today</span>' : ''}</span>
       <span class="row">${d.exercises.length ? `<button class="btn sm primary" data-act="startWorkout" data-arg="${i}">Start</button>` : ''}<button class="btn sm ghost" data-act="editDay" data-arg="${i}">Edit</button></span></h2>
       ${d.focus ? `<div class="small muted">${esc(d.focus)}</div>` : ''}
       ${d.exercises.length ? `<ul class="list">${d.exercises.map(e => `<li><div class="grow"><div>${esc(e.name)}</div><div class="meta">${e.sets} × ${esc(e.reps)}${e.rir ? ` @ ${esc(e.rir)} RIR` : ''} · rest ${e.rest}s${e.notes ? ' · ' + esc(e.notes) : ''}</div></div></li>`).join('')}</ul>` : ''}
@@ -315,9 +315,9 @@ function weekView() {
     <div class="stat"><div class="v num">${wk.length}/${planned}</div><div class="l">sessions</div></div>
     <div class="stat"><div class="v num">${Object.values(sets).reduce((a, b) => a + b, 0)}</div><div class="l">hard sets</div></div>
     <div class="stat"><div class="v num">${volume >= 1000 ? r1(volume / 1000) + 't' : r0(volume) + 'kg'}</div><div class="l">volume</div></div></div>
-    <div class="row" style="gap:4px;margin-top:12px">${DAYS.map((d, i) => { const k = addDays(ws, i), did = wk.some(w => w.date === k), pl = plan.days[i].exercises.length; return `<div class="grow" style="text-align:center"><div class="small muted">${d[0]}</div><div style="height:28px;border-radius:6px;margin-top:2px;background:${did ? 'var(--good)' : pl ? 'var(--surface-2)' : 'transparent'};border:1px ${pl && !did ? 'solid' : 'dashed'} var(--border)"></div></div>`; }).join('')}</div>
-    <div class="legend"><span><i class="dot" style="background:var(--good)"></i>done</span><span><i class="dot" style="background:var(--surface-2);border:1px solid var(--border)"></i>planned</span></div></div>`;
-  html += `<div class="card"><h2>Sets per muscle <span class="small muted">done / planned</span></h2>${muscles.length ? barRows(muscles.map(m => ({ label: m[0].toUpperCase() + m.slice(1), value: sets[m] || 0, target: plannedSets[m] || 0 }))) : '<div class="small muted">No sets yet.</div>'}
+    <div class="row" style="gap:4px;margin-top:12px">${DAYS.map((d, i) => { const k = addDays(ws, i), did = wk.some(w => w.date === k), pl = plan.days[i].exercises.length; return `<div class="grow" style="text-align:center"><div class="small muted">${d[0]}</div><div style="height:28px;border-radius:6px;margin-top:2px;background:${did ? 'var(--mint)' : pl ? 'var(--surface-2)' : 'transparent'};border:1.5px ${pl && !did ? 'solid' : 'dashed'} var(--border);border-radius:999px"></div></div>`; }).join('')}</div>
+    <div class="legend"><span><i class="dot" style="background:var(--mint)"></i>done</span><span><i class="dot" style="background:var(--surface-2);border:1px solid var(--border)"></i>planned</span></div></div>`;
+  html += `<div class="card"><h2>Sets per muscle <span class="small muted">done / planned</span></h2>${muscles.length ? barRows(muscles.map(m => ({ label: m[0].toUpperCase() + m.slice(1), value: sets[m] || 0, target: plannedSets[m] || 0 })), 'var(--ink)') : '<div class="small muted">No sets yet.</div>'}
     <p class="small muted">Most people grow well on roughly 10–20 hard sets per muscle per week.</p></div>`;
   const avgR = recoveryAvg(7);
   if (avgR) html += `<div class="card"><h2>Recovery this week</h2><div class="grid3"><div class="stat"><div class="v num">${r1(avgR.sleepH)}h</div><div class="l">avg sleep</div></div><div class="stat"><div class="v num">${r0(avgR.score)}</div><div class="l">avg readiness</div></div><div class="stat"><div class="v num">${r1(avgR.soreness)}/5</div><div class="l">avg soreness</div></div></div></div>`;
@@ -332,7 +332,7 @@ function muscleOf(name) {
 // ---------- history & progress ----------
 function historyView() {
   const ws = [...S.workouts].sort((a, b) => b.finishedAt - a.finishedAt);
-  if (!ws.length) return '<div class="empty">No workouts logged yet.</div>';
+  if (!ws.length) return emptyState('No workouts logged yet.', 'var(--mint)', 1);
   return `<div class="card"><ul class="list">${ws.slice(0, 60).map(w => {
     const sets = w.exercises.reduce((a, e) => a + e.sets.filter(s => s.done).length, 0);
     const vol = w.exercises.reduce((a, e) => a + e.sets.filter(s => s.done).reduce((b, s) => b + num(s.w) * num(s.r), 0), 0);
@@ -350,7 +350,7 @@ A.delWorkout = id => { if (confirm('Delete this workout?')) { S.workouts = S.wor
 
 function progressView() {
   const names = [...new Set(S.workouts.flatMap(w => w.exercises.filter(e => e.sets.some(s => s.done)).map(e => e.name)))].sort();
-  if (!names.length) return '<div class="empty">Finish a workout to see progress.</div>';
+  if (!names.length) return emptyState('Finish a workout to see progress.', 'var(--blue)', 2);
   const ex = ui.progressEx && names.includes(ui.progressEx) ? ui.progressEx : names[0];
   const pts = S.workouts.filter(w => w.exercises.some(e => e.name === ex)).sort((a, b) => a.date.localeCompare(b.date)).map(w => {
     const sets = w.exercises.filter(e => e.name === ex).flatMap(e => e.sets.filter(s => s.done));
@@ -360,7 +360,7 @@ function progressView() {
   const pr = pts.reduce((a, p) => Math.max(a, p.y), 0);
   return `<div class="card"><label class="f"><span>Exercise</span><select data-input="progressEx">${names.map(n => `<option ${n === ex ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
     <div class="grid2" style="margin-bottom:10px"><div class="stat"><div class="v num">${r1(pr)} kg</div><div class="l">best estimated 1RM</div></div><div class="stat"><div class="v num">${pts.length ? pts[pts.length - 1].top : 0} kg</div><div class="l">last top weight</div></div></div>
-    <h3>Estimated 1RM per session</h3>${lineChart('e1rm', [{ name: 'Est. 1RM', color: 'var(--accent)', points: pts, dots: true }], { unit: ' kg' })}
+    <h3>Estimated 1RM per session</h3>${lineChart('e1rm', [{ name: 'Est. 1RM', color: 'var(--line)', points: pts, dots: true, dotR: 5 }], { unit: ' kg' })}
     <p class="small muted">Estimated 1RM uses the Epley formula from your best set each session, so rep PRs count too.</p></div>`;
 }
 I.progressEx = el => { ui.progressEx = el.value; render(); };

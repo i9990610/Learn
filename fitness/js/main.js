@@ -9,7 +9,12 @@ function render() {
   view.innerHTML = V[ui.tab]();
   $('#title').textContent = TITLES[ui.tab];
   $$('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.arg === ui.tab));
-  if (same) window.scrollTo(0, y); else window.scrollTo(0, 0);
+  if (same) window.scrollTo(0, y);
+  else {
+    window.scrollTo(0, 0);
+    view.classList.remove('enter'); void view.offsetWidth; view.classList.add('enter');
+    clearTimeout(render._t); render._t = setTimeout(() => view.classList.remove('enter'), 600);
+  }
   render.last = ui.tab;
   try { sessionStorage.setItem('fitlog.tab', ui.tab); } catch {}
 }
@@ -68,6 +73,8 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+applyTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
 try { const t = sessionStorage.getItem('fitlog.tab'); if (t && V[t]) ui.tab = t; } catch {}
 render();
 

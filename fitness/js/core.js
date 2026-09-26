@@ -8,6 +8,7 @@ const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
 const DEFAULT_STATE = () => ({
   profile: { sex: 'female', age: 25, heightCm: 165, activity: 1.55, goal: 'maintain', rateKg: 0.25, goalWeight: null, setupDone: false },
   targets: { kcal: 2000, protein: 120, carbs: 220, fat: 65, waterMl: 2500 },
+  theme: 'light',
   ai: { provider: 'anthropic', anthropicKey: '', anthropicModel: 'claude-opus-5', openaiKey: '', openaiModel: 'gpt-5' },
   food: {},          // { 'YYYY-MM-DD': [{id,name,qty,meal,kcal,p,c,f}] }
   savedFoods: [],    // favourites
@@ -108,6 +109,26 @@ function formData(form) {
     else o[el.name] = el.value;
   }
   return o;
+}
+
+// ---------- blob characters ----------
+const BLOBS = [
+  'M52 8c20 0 38 12 40 34s-8 44-30 48S14 86 10 62 26 8 52 8z',
+  'M30 14c14-10 34-6 42 6 10 2 22 14 18 30 6 14-2 32-20 36-12 10-34 8-44-4C12 76 6 58 14 44 10 30 18 18 30 14z',
+  'M50 10c12 0 20 8 22 16 12 0 22 10 20 24 8 10 2 28-14 30-6 12-26 14-36 6-14 4-30-4-30-20C2 58 4 40 16 34 14 20 30 10 50 10z',
+  'M48 6c26-2 44 20 42 44-2 26-22 44-46 42C20 90 6 70 8 46 10 22 26 8 48 6z',
+];
+function blob(color = 'var(--yellow)', v = 0, cls = '') {
+  return `<svg class="blob ${cls}" viewBox="0 0 100 100" aria-hidden="true"><g class="wob"><path d="${BLOBS[v % BLOBS.length]}" fill="${color}" stroke="none"/>
+    <ellipse class="eye" cx="42" cy="46" rx="4.2" ry="5.8" fill="#111" stroke="none"/><ellipse class="eye" cx="59" cy="46" rx="4.2" ry="5.8" fill="#111" stroke="none"/></g></svg>`;
+}
+const PASTELS = ['yellow', 'pink', 'mint', 'blue'];
+function emptyState(text, color = 'var(--surface-2)', v = 3) { return `<div class="empty">${blob(color, v)}${text}</div>`; }
+function applyTheme() {
+  const t = S.theme || 'light';
+  document.documentElement.dataset.theme = t;
+  const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', dark ? '#161514' : '#f7f3ef');
 }
 
 // ---------- domain helpers ----------
@@ -221,7 +242,7 @@ const charts = {};
 function lineChart(id, series, { unit = '', height = 180, target = null } = {}) {
   // series: [{name, color, points:[{x (ms), y, label}], dots, width}]
   const all = series.flatMap(s => s.points);
-  if (all.length < 2) return `<div class="empty small">Log at least two entries to see a chart.</div>`;
+  if (all.length < 2) return emptyState('Log at least two entries to see a chart.', 'var(--blue)', 1);
   const W = 600, H = height, pl = 40, pr = 12, pt = 12, pb = 24;
   let x0 = Math.min(...all.map(p => p.x)), x1 = Math.max(...all.map(p => p.x));
   let ys = all.map(p => p.y); if (target != null) ys.push(target);
@@ -233,7 +254,7 @@ function lineChart(id, series, { unit = '', height = 180, target = null } = {}) 
   const ticks = 4, grid = [];
   for (let i = 0; i <= ticks; i++) {
     const v = y0 + ((y1 - y0) * i) / ticks, y = sy(v);
-    grid.push(`<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" stroke="var(--border)" stroke-width="1"/><text x="${pl - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="var(--muted)" stroke="none">${r1(v)}</text>`);
+    grid.push(`<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 5"/><text x="${pl - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="var(--muted)" stroke="none">${r1(v)}</text>`);
   }
   const d0 = new Date(x0), d1 = new Date(x1);
   const f = d => d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });

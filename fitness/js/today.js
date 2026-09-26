@@ -10,18 +10,23 @@ V.today = () => {
   const k = today(), t = dayTotals(k), T = S.targets;
   let html = '';
 
-  if (!S.profile.setupDone) {
-    html += `<div class="card"><h2>Welcome</h2><p class="muted">Set your profile first so calorie and macro targets are tailored to you. Then add an AI key if you want to log food by chat.</p><button class="btn primary block" data-act="go" data-arg="settings">Set up profile &amp; targets</button></div>`;
-  }
+  const h = new Date().getHours();
+  const hi = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  const cheer = !S.profile.setupDone ? 'Set up your profile so your targets fit you.'
+    : t.kcal === 0 ? "Nothing logged yet. What's first?"
+    : t.p >= T.protein * 0.95 ? 'Protein target hit. Nice work.'
+    : `${r0(Math.max(0, T.protein - t.p))} g protein to go today.`;
+  html += `<div class="card yellow hero"><div class="eyebrow">${fmtDate(k, { weekday: 'long', day: 'numeric', month: 'long' })}</div><h2>${hi}.</h2><p>${esc(cheer)}</p>
+    ${!S.profile.setupDone ? '<div style="margin-top:14px"><button class="btn primary" data-act="go" data-arg="settings">Set up</button></div>' : ''}${blob('var(--cream)', 0)}</div>`;
 
   // calories ring
   const pct = T.kcal ? clamp(t.kcal / T.kcal, 0, 1) : 0, R = 48, C = 2 * Math.PI * R;
   const left = T.kcal - t.kcal;
-  html += `<div class="card"><h2>Calories <button class="btn sm ghost" data-act="go" data-arg="food">Log food</button></h2>
-    <div class="ring"><svg viewBox="0 0 116 116"><circle cx="58" cy="58" r="${R}" stroke="var(--surface-2)" stroke-width="12"/>
-    <circle cx="58" cy="58" r="${R}" stroke="${left < 0 ? 'var(--bad)' : 'var(--accent)'}" stroke-width="12" stroke-dasharray="${C * pct} ${C}" transform="rotate(-90 58 58)"/>
-    <text x="58" y="56" text-anchor="middle" font-size="20" font-weight="700" fill="var(--text)" stroke="none">${r0(Math.abs(left))}</text>
-    <text x="58" y="74" text-anchor="middle" font-size="11" fill="var(--muted)" stroke="none">${left < 0 ? 'kcal over' : 'kcal left'}</text></svg>
+  html += `<div class="card"><h2>Calories <button class="btn sm" data-act="go" data-arg="food">Log food <span class="arrow-dot">→</span></button></h2>
+    <div class="ring"><svg viewBox="0 0 116 116"><circle cx="58" cy="58" r="${R}" stroke="var(--surface-2)" stroke-width="13"/>
+    <circle class="arc" cx="58" cy="58" r="${R}" stroke="${left < 0 ? 'var(--bad)' : 'var(--ink)'}" stroke-width="13" stroke-dasharray="${C * pct} ${C}" transform="rotate(-90 58 58)"/>
+    <text x="58" y="57" text-anchor="middle" font-size="22" font-weight="800" fill="var(--text)" stroke="none">${r0(Math.abs(left))}</text>
+    <text x="58" y="75" text-anchor="middle" font-size="11" font-weight="700" fill="var(--muted)" stroke="none">${left < 0 ? 'kcal over' : 'kcal left'}</text></svg>
     <div class="grow"><div class="num"><b>${r0(t.kcal)}</b> <span class="muted">/ ${T.kcal} kcal eaten</span></div><div style="height:8px"></div>
     ${macroBar('Protein', t.p, T.protein, 'var(--protein)')}${macroBar('Carbs', t.c, T.carbs, 'var(--carbs)')}${macroBar('Fat', t.f, T.fat, 'var(--fat)')}</div></div></div>`;
 
@@ -31,7 +36,7 @@ V.today = () => {
   // water
   const w = waterTotal(k), wp = T.waterMl ? clamp(w / T.waterMl, 0, 1) * 100 : 0;
   html += `<div class="card"><h2>Water <span class="num muted small">${(w / 1000).toFixed(2)} / ${(T.waterMl / 1000).toFixed(1)} L</span></h2>
-    <div class="bar" style="height:12px;margin-bottom:10px"><i style="width:${wp}%;background:var(--accent)"></i></div>
+    <div class="bar" style="height:14px;margin-bottom:12px"><i style="width:${wp}%;background:var(--blue)"></i></div>
     <div class="row wrap"><button class="btn sm" data-act="water" data-arg="250">+250 ml</button><button class="btn sm" data-act="water" data-arg="500">+500 ml</button><button class="btn sm" data-act="water" data-arg="750">+750 ml</button><button class="btn sm ghost" data-act="waterUndo" ${w ? '' : 'disabled'}>Undo</button></div></div>`;
 
   // streaks
@@ -51,17 +56,17 @@ V.today = () => {
 
 function todayWorkoutCard(k) {
   const plan = S.training.plan;
-  if (!plan) return `<div class="card"><h2>Training</h2><p class="muted small">Answer a few questions and get a weekly plan built around your goals.</p><button class="btn block" data-act="go" data-arg="train">Build my plan</button></div>`;
+  if (!plan) return `<div class="card pink hero" style="min-height:0"><div class="eyebrow">Training</div><h2>Build your plan</h2><p class="muted">A few questions, then a week built around your goals.</p><div style="margin-top:14px"><button class="btn primary" data-act="go" data-arg="train">Let's go</button></div>${blob('var(--cream)', 3)}</div>`;
   const di = weekdayIdx(k), day = plan.days[di];
   const done = S.workouts.filter(w => w.date === k);
-  if (S.activeWorkout) return `<div class="card"><h2>Workout in progress</h2><p class="small muted">${esc(S.activeWorkout.title)}</p><button class="btn primary block" data-act="resumeWorkout">Resume</button></div>`;
-  if (done.length) return `<div class="card"><h2>Training <span class="tag good">Done</span></h2><p class="small">${done.map(w => esc(w.title)).join(', ')}: ${done.reduce((a, w) => a + w.exercises.reduce((b, e) => b + e.sets.filter(s => s.done).length, 0), 0)} set(s) logged.</p></div>`;
-  if (!day || !day.exercises?.length) return `<div class="card"><h2>Training <span class="tag">Rest day</span></h2><p class="small muted">${esc(day?.cardio || 'Recover: walk, stretch, sleep.')}</p></div>`;
+  if (S.activeWorkout) return `<div class="card yellow hero" style="min-height:0"><div class="eyebrow">In progress</div><h2>${esc(S.activeWorkout.title)}</h2><div style="margin-top:14px"><button class="btn primary" data-act="resumeWorkout">Resume</button></div>${blob('var(--blue)', 2)}</div>`;
+  if (done.length) return `<div class="card mint hero" style="min-height:0"><div class="eyebrow">Training · done ✓</div><h2>Nice work!</h2><p>${done.map(w => esc(w.title)).join(', ')}: ${done.reduce((a, w) => a + w.exercises.reduce((b, e) => b + e.sets.filter(s => s.done).length, 0), 0)} set(s) logged.</p>${blob('var(--yellow)', 1)}</div>`;
+  if (!day || !day.exercises?.length) return `<div class="card mint hero" style="min-height:0"><div class="eyebrow">Training</div><h2>Rest day</h2><p class="muted">${esc(day?.cardio || 'Recover: walk, stretch, sleep.')}</p>${blob('var(--cream)', 1)}</div>`;
   const r = readiness(S.recovery[k]);
-  return `<div class="card"><h2>${esc(day.title)} <span class="tag accent">Today</span></h2>
-    <p class="small muted">${day.exercises.map(e => esc(e.name)).join(' · ')}</p>
-    ${r != null && r < 55 ? '<p class="small" style="color:var(--warn)">Readiness is low today. Consider dropping a set per exercise or keeping 3+ reps in reserve.</p>' : ''}
-    <button class="btn primary block" data-act="startWorkout" data-arg="${di}">Start workout</button></div>`;
+  return `<div class="card blue hero" style="min-height:0"><div class="eyebrow">Today's session</div><h2>${esc(day.title)}</h2>
+    <p class="muted">${day.exercises.length} exercises · ${day.exercises.reduce((a, e) => a + e.sets, 0)} sets</p>
+    ${r != null && r < 55 ? '<p class="small" style="margin-top:6px;max-width:70%">Readiness is low. Drop a set per exercise or keep 3+ reps in reserve.</p>' : ''}
+    <div style="margin-top:14px"><button class="btn primary" data-act="startWorkout" data-arg="${di}">Start workout</button></div>${blob('var(--pink)', 2)}</div>`;
 }
 
 function streaksCard() {
@@ -73,8 +78,8 @@ function streaksCard() {
   const ws = weekStart(today());
   const planned = S.training.plan ? S.training.plan.days.filter(d => d.exercises?.length).length : 0;
   const doneWeek = new Set(S.workouts.filter(w => w.date >= ws).map(w => w.date)).size;
-  const s = (v, l) => `<div class="stat streak"><div class="v num">${v}</div><div class="l">${l}</div></div>`;
-  return `<div class="card"><h2>Streaks</h2><div class="grid3">${s(protein, 'days protein hit')}${s(cals, 'days kcal ±10%')}${s(water, 'days water hit')}${s(logged, 'days logged')}${s(`${doneWeek}/${planned || '–'}`, 'sessions this week')}${s(checkinDue() ? 'Due' : 'OK', 'weekly check-in')}</div></div>`;
+  const s = (v, l, c) => `<div class="stat streak ${c}"><div class="v num">${v}</div><div class="l">${l}</div></div>`;
+  return `<div class="card"><h2>Streaks <span class="small muted">🔥 keep it going</span></h2><div class="grid3">${s(protein, 'days protein', 'blue')}${s(cals, 'days on kcal', 'yellow')}${s(water, 'days water', 'mint')}${s(logged, 'days logged', 'pink')}${s(`${doneWeek}/${planned || '–'}`, 'sessions', '')}${s(checkinDue() ? 'Due' : 'OK', 'check-in', '')}</div></div>`;
 }
 
 function recoveryCard(k) {
@@ -82,7 +87,7 @@ function recoveryCard(k) {
   if (r && !ui.editRecovery) {
     const sc = readiness(r), [lab, cls] = readinessLabel(sc);
     return `<div class="card"><h2>Recovery <button class="btn sm ghost" data-act="editRecovery">Edit</button></h2>
-      <div class="row between"><div><div class="big num">${sc}</div><div class="small muted">readiness / 100</div></div><span class="tag ${cls}" style="${cls === 'warn' ? 'color:var(--warn)' : ''}">${lab}</span></div>
+      <div class="row between"><div><div class="big num">${sc}</div><div class="small muted">readiness / 100</div></div><span class="tag ${cls || 'accent'}">${lab}</span></div>
       <p class="small muted">Sleep ${r.sleepH} h (quality ${r.sleepQ}/5) · energy ${r.energy}/5 · soreness ${r.soreness}/5 · stress ${r.stress}/5</p></div>`;
   }
   const v = r || { sleepH: '', sleepQ: 3, energy: 3, soreness: 2, stress: 3 };
