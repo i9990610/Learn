@@ -218,9 +218,12 @@ function plannerView() {
       <div class="eyebrow" style="margin-bottom:6px">Lift</div>
       <div class="chips" style="margin-bottom:12px"><button class="chip ${d.lift == null ? 'on' : ''}" data-act="wkLift" data-arg="${i}:-">None</button>${sessions.map(s => `<button class="chip ${d.lift === s.i ? 'on' : ''}" data-act="wkLift" data-arg="${i}:${s.i}">${esc(s.d.title)}</button>`).join('')}</div>
       ${cs.length ? `<div class="eyebrow" style="margin-bottom:6px">Classes</div><div class="chips" style="margin-bottom:${(d.extras || []).length ? 12 : 0}px">${cs.map(c => `<button class="chip ${d.classes.includes(c.id) ? 'on' : ''}" data-act="wkClass" data-arg="${i}:${c.id}">${esc(c.time)} ${esc(c.name)}</button>`).join('')}</div>` : ''}
-      ${(d.extras || []).length ? `<div class="eyebrow" style="margin-bottom:6px">Other</div><div class="chips">${d.extras.map((x, ei) => `<button class="chip on" data-act="wkExtra" data-arg="${i}:${ei}">${ACT_ICON[x.type] || '✨'} ${esc(x.name)} ×</button>`).join('')}</div>` : ''}
+      <div class="eyebrow" style="margin:${cs.length ? 12 : 0}px 0 6px">Other activities</div>
+      ${(d.extras || []).length ? `<div class="chips" style="margin-bottom:8px">${d.extras.map((x, ei) => `<button class="chip on" data-act="wkExtra" data-arg="${i}:${ei}" aria-label="Remove ${esc(x.name)}">${ACT_ICON[x.type] || '✨'} ${esc(x.name)}${x.duration ? ` · ${x.duration} min` : ''} ×</button>`).join('')}</div>` : ''}
+      <form data-form="wkAddExtra" class="row"><input type="hidden" name="i" value="${i}"><input type="text" name="text" list="wkActs" placeholder="Add e.g. Swim 30 min" autocomplete="off"><button class="btn sm">Add</button></form>
       ${d.reason ? `<p class="small muted" style="margin:10px 0 0">💡 ${esc(d.reason)}</p>` : ''}</div>`;
   });
+  html += `<datalist id="wkActs">${pastActivityNames().map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
   html += `<div class="row" style="position:sticky;bottom:calc(92px + env(safe-area-inset-bottom));padding:8px 0"><button class="btn" style="background:var(--surface)" data-act="cancelWeek">Cancel</button><button class="btn primary grow" data-act="saveWeek">Save week</button></div>`;
   return html;
 }
@@ -230,6 +233,30 @@ A.wkLift = arg => { const [i, v] = arg.split(':'); ui.weekEdit.draft.days[+i].li
 A.wkClass = arg => {
   const [i, id] = arg.split(':'), d = ui.weekEdit.draft.days[+i];
   d.classes = d.classes.includes(id) ? d.classes.filter(x => x !== id) : [...d.classes, id];
+  render();
+};
+// Free-text activity, e.g. "Swimming 30 min", "1h hike", "tennis"
+function parseActivity(text) {
+  let t = text.trim(), duration = 0;
+  const h = t.match(/(\d+(?:\.\d+)?)\s*(h|hr|hrs|hour|hours)\b/i), m = t.match(/(\d+)\s*(m|min|mins|minutes)\b/i);
+  if (h) duration += Math.round(parseFloat(h[1]) * 60);
+  if (m) duration += +m[1];
+  const name = t.replace(/(\d+(?:\.\d+)?)\s*(h|hr|hrs|hour|hours|m|min|mins|minutes)\b/gi, '').replace(/\s{2,}/g, ' ').replace(/^[\s,-]+|[\s,-]+$/g, '');
+  const n = name ? name[0].toUpperCase() + name.slice(1) : 'Activity';
+  const type = /swim|pool|aqua/i.test(n) ? 'swim' : /walk|run|jog|hike|cycle|bike|ride|row/i.test(n) ? 'cardio' : /yoga|stretch|mobility|pilates/i.test(n) ? 'mobility' : /tennis|netball|soccer|football|basketball|squash|badminton|touch|sport|climb/i.test(n) ? 'sport' : /sauna|massage|recovery/i.test(n) ? 'recovery' : 'cardio';
+  return { name: n, type, duration: duration || 30, details: '' };
+}
+function pastActivityNames() {
+  const names = new Set();
+  for (const wp of Object.values(S.weekPlans)) for (const d of wp.days) (d.extras || []).forEach(x => names.add(x.name));
+  S.workouts.filter(w => w.activity).forEach(w => names.add(w.title));
+  ['Swimming', 'Walk', 'Run', 'Hike', 'Stretch / mobility'].forEach(n => names.add(n));
+  return [...names].slice(0, 30);
+}
+F.wkAddExtra = d => {
+  if (!d.text.trim()) return;
+  const day = ui.weekEdit.draft.days[+d.i];
+  (day.extras = day.extras || []).push(parseActivity(d.text));
   render();
 };
 A.wkExtra = arg => { const [i, ei] = arg.split(':').map(Number); ui.weekEdit.draft.days[i].extras.splice(ei, 1); render(); };
@@ -247,10 +274,10 @@ A.suggestWeek = async (_, btn) => {
   const { ws, draft } = ui.weekEdit, plan = S.training.plan, q = S.training.questionnaire || {};
   const sessions = plan.days.map((d, i) => ({ id: i, title: d.title, focus: d.focus, exercises: d.exercises.map(e => e.name).join(', ') })).filter((s, i) => plan.days[i].exercises.length);
   const tt = S.timetable.classes.map(c => ({ id: c.id, day: DAYS[c.day], time: c.time, name: c.name, minutes: c.duration, type: c.type }));
-  const notes = draft.days.map((d, i) => `${DAYS[i]} ${fmtDate(addDays(ws, i), { day: 'numeric', month: 'short' })}: ${d.note || 'no commitments noted'}`).join('\n');
+  const notes = draft.days.map((d, i) => `${DAYS[i]} ${fmtDate(addDays(ws, i), { day: 'numeric', month: 'short' })}: ${d.note || 'no commitments noted'}${(d.extras || []).length ? ` | already planned: ${d.extras.map(x => `${x.name} ${x.duration} min`).join(', ')}` : ''}`).join('\n');
   const since = addDays(today(), -7);
   const recent = S.workouts.filter(w => w.date >= since).map(w => `${w.date} ${w.title}`).join('; ') || 'none';
-  const system = `You are the user's coach planning one specific week around their real commitments. Place each lifting session once on a day it fits (respect session length ${q.length || '60 min'}), spread hard sessions for recovery (avoid heavy legs the day after spin/HIIT/leg-heavy classes), and add timetable classes that suit the goal and cardio preference without overloading busy days. Classes must fit around the stated commitments (e.g. a placement 8–5 rules out a 12:00 class but allows 06:15 or 18:30). It's fine to leave a session out if the week is genuinely too full; say so. ${userContext()}`;
+  const system = `You are the user's coach planning one specific week around their real commitments. Place each lifting session once on a day it fits (respect session length ${q.length || '60 min'}), spread hard sessions for recovery (avoid heavy legs the day after spin/HIIT/leg-heavy classes), and add timetable classes that suit the goal and cardio preference without overloading busy days. Classes must fit around the stated commitments (e.g. a placement 8–5 rules out a 12:00 class but allows 06:15 or 18:30). It's fine to leave a session out if the week is genuinely too full; say so. Activities marked 'already planned' are fixed: keep them and count them toward the day's load. ${userContext()}`;
   const user = `Goal: ${q.goal || ''}; cardio preference: ${q.cardio || ''}; facilities liked: ${(q.facilities || []).join(', ')}; lifestyle: ${q.schedule || ''}.
 Lifting sessions (use the id): ${JSON.stringify(sessions)}
 Class timetable (use the id): ${JSON.stringify(tt)}
