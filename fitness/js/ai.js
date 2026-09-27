@@ -109,8 +109,9 @@ function userContext() {
   return [
     `User profile: ${p.sex}, ${p.age} y, ${p.heightCm} cm${w ? `, ${w} kg` : ''}. Goal: ${p.goal}${p.goal !== 'maintain' ? ` at ~${p.rateKg} kg/week` : ''}${p.goalWeight ? `, goal weight ${p.goalWeight} kg` : ''}.`,
     `Daily targets: ${t.kcal} kcal, protein ${t.protein} g, carbs ${t.carbs} g, fat ${t.fat} g, water ${t.waterMl} ml.`,
+    typeof healthContext === 'function' ? healthContext() : '',
     'The user lives in NSW, Australia and is a final-year medical student. Use metric units, Australian food names and brands (e.g. Woolworths/Coles products), and Australian spelling. Energy in kcal (give kJ only if asked).',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 function aiBusyButton(btn, on) {

@@ -1,7 +1,7 @@
 'use strict';
 // Router, event delegation, boot.
 
-const TITLES = { today: 'Today', food: 'Food', train: 'Training', meals: 'Meal plan', body: 'Body', settings: 'Settings' };
+const TITLES = { today: 'Today', food: 'Food', train: 'Training', meals: 'Meal plan', body: 'Body', health: 'Health', settings: 'Settings' };
 
 function render() {
   const view = $('#view');
@@ -19,7 +19,7 @@ function render() {
   try { sessionStorage.setItem('fitlog.tab', ui.tab); } catch {}
 }
 
-A.go = tab => { ui.tab = tab; if (tab === 'food') ui.foodDate = ui.foodDate || today(); render(); };
+A.go = tab => { ui.tab = tab; if (tab === 'food') ui.foodDate = ui.foodDate || today(); if (tab === 'health') ui.healthDate = ui.healthDate || today(); render(); };
 A.close = closeModal;
 
 document.addEventListener('click', e => {
@@ -69,6 +69,7 @@ let lastDay = today();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && today() !== lastDay) {
     if (ui.foodDate === lastDay) ui.foodDate = today();
+    if (ui.healthDate === lastDay) ui.healthDate = today();
     lastDay = today(); render();
   }
 });

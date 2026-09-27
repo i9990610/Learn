@@ -18,6 +18,10 @@ const DEFAULT_STATE = () => ({
   activeWorkout: null,
   timetable: { gym: '', classes: [], importedAt: null },
   weekPlans: {},     // { weekStartKey: { days: [{lift, classes, extras, note}] } }
+  bowels: {},        // { date: {events:[{id,size,time,bristol,notes}], none, laxative:{taken,name,dose}} }
+  cycle: { days: {}, settings: { cycleLength: 28, periodLength: 5 } },
+  symptoms: {},      // { date: {items:{name: severity 1-3}, notes} }
+  symptomList: [],
   mealPlan: null,    // { prefs, days:[{day, meals:[...]}] }
   mealPrefs: null,
   grocery: { items: [], builtAt: null },
@@ -34,7 +38,7 @@ function load() {
     const d = DEFAULT_STATE();
     const s = JSON.parse(raw);
     for (const k of Object.keys(d)) if (s[k] === undefined) s[k] = d[k];
-    for (const k of ['profile', 'targets', 'ai', 'training']) s[k] = Object.assign(d[k], s[k]);
+    for (const k of ['profile', 'targets', 'ai', 'training', 'cycle']) s[k] = Object.assign(d[k], s[k]);
     return s;
   } catch (e) {
     console.error(e);

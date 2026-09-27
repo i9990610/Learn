@@ -34,6 +34,7 @@ V.today = () => {
   html += quickLogCard(k, { compact: true });
   html += todayWorkoutCard(k);
   html += planWeekNudge();
+  html += healthTodayCard();
 
   // water
   const w = waterTotal(k), wp = T.waterMl ? clamp(w / T.waterMl, 0, 1) * 100 : 0;
