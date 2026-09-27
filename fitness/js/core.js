@@ -16,6 +16,8 @@ const DEFAULT_STATE = () => ({
   training: { questionnaire: null, plan: null, createdAt: null, checkins: [] },
   workouts: [],      // finished sessions
   activeWorkout: null,
+  timetable: { gym: '', classes: [], importedAt: null },
+  weekPlans: {},     // { weekStartKey: { days: [{lift, classes, extras, note}] } }
   mealPlan: null,    // { prefs, days:[{day, meals:[...]}] }
   mealPrefs: null,
   grocery: { items: [], builtAt: null },

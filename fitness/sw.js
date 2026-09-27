@@ -1,5 +1,5 @@
-const CACHE = 'fitlog-v3';
-const SHELL = ['./', 'index.html', 'styles.css', 'js/core.js', 'js/ai.js', 'js/today.js', 'js/food.js', 'js/train.js', 'js/meals.js', 'js/body.js', 'js/settings.js', 'js/main.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+const CACHE = 'fitlog-v4';
+const SHELL = ['./', 'index.html', 'styles.css', 'js/core.js', 'js/ai.js', 'js/today.js', 'js/food.js', 'js/train.js', 'js/week.js', 'js/meals.js', 'js/body.js', 'js/settings.js', 'js/main.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

@@ -214,7 +214,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--i
 .scroller::-webkit-scrollbar { display: none; }
 
 .seg { display: flex; background: var(--surface); border-radius: 999px; padding: 5px; margin-bottom: 14px; box-shadow: var(--shadow); }
-.seg button { flex: 1; border: 0; background: none; padding: 9px 4px; border-radius: 999px; font-weight: 800; font-size: 13px; color: var(--muted); cursor: pointer; transition: background .2s, color .2s; }
+.seg button { flex: 1; border: 0; background: none; padding: 9px 2px; border-radius: 999px; font-weight: 800; font-size: 12.5px; white-space: nowrap; color: var(--muted); cursor: pointer; transition: background .2s, color .2s; }
 .seg button.on { background: var(--ink); color: var(--ink-text); }
 
 /* ---------- bars & macros ---------- */
