@@ -54,7 +54,7 @@ document.addEventListener('change', onInput);
 
 // Enter sends in the chat composer (Shift+Enter for a newline)
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey && e.target.matches('.composer textarea')) {
+  if (e.key === 'Enter' && !e.shiftKey && e.target.matches('.composer textarea, textarea[data-enter]')) {
     e.preventDefault();
     e.target.form.requestSubmit();
   }

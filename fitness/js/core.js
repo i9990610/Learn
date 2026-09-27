@@ -139,8 +139,9 @@ function dayTotals(k) {
   return dayFood(k).reduce((t, e) => ({ kcal: t.kcal + num(e.kcal), p: t.p + num(e.p), c: t.c + num(e.c), f: t.f + num(e.f) }), { kcal: 0, p: 0, c: 0, f: 0 });
 }
 function addFood(k, entry) {
-  (S.food[k] = S.food[k] || []).push({ id: uid(), meal: defaultMeal(), qty: '', ...entry,
-    kcal: r0(num(entry.kcal)), p: r1(num(entry.p)), c: r1(num(entry.c)), f: r1(num(entry.f)) });
+  const e = { id: uid(), meal: defaultMeal(), qty: '', ...entry, kcal: r0(num(entry.kcal)), p: r1(num(entry.p)), c: r1(num(entry.c)), f: r1(num(entry.f)) };
+  (S.food[k] = S.food[k] || []).push(e);
+  return e;
 }
 function waterTotal(k) { return (S.water[k] || []).reduce((a, b) => a + b, 0); }
 

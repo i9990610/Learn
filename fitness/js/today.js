@@ -31,6 +31,7 @@ V.today = () => {
     ${macroBar('Protein', t.p, T.protein, 'var(--protein)')}${macroBar('Carbs', t.c, T.carbs, 'var(--carbs)')}${macroBar('Fat', t.f, T.fat, 'var(--fat)')}</div></div></div>`;
 
   // today's workout
+  html += quickLogCard(k, { compact: true });
   html += todayWorkoutCard(k);
   html += planWeekNudge();
 

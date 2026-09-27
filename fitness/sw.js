@@ -1,4 +1,4 @@
-const CACHE = 'fitlog-v4';
+const CACHE = 'fitlog-v5';
 const SHELL = ['./', 'index.html', 'styles.css', 'js/core.js', 'js/ai.js', 'js/today.js', 'js/food.js', 'js/train.js', 'js/week.js', 'js/meals.js', 'js/body.js', 'js/settings.js', 'js/main.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
