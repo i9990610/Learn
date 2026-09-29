@@ -32,7 +32,7 @@ V.settings = () => {
 
   <div class="card"><h2>Data</h2><div class="row wrap"><button class="btn" data-act="exportData">Export backup</button><label class="btn">Import backup<input type="file" accept="application/json" data-input="importData" hidden></label><button class="btn danger" data-act="resetAll">Reset everything</button></div>
     <p class="small muted">Everything is saved on this device. Export a backup now and then (API keys and photos are not included).</p></div>
-  <p class="small muted" style="text-align:center">Fit Log · not medical advice</p>`;
+  <p class="small muted" style="text-align:center">Fit Log · version ${APP_VERSION} · not medical advice<br><button class="btn sm ghost" style="margin-top:8px" data-act="forceUpdate">Check for updates</button></p>`;
 };
 
 F.profile = d => {
@@ -54,6 +54,15 @@ F.profile = d => {
   toast(`TDEE ≈ ${r0(tdee)} kcal → target ${kcal} kcal`, 4000);
 };
 A.theme = v => { S.theme = v; save(); applyTheme(); render(); };
+A.forceUpdate = async () => {
+  toast('Updating…');
+  try {
+    const regs = await navigator.serviceWorker?.getRegistrations() || [];
+    await Promise.all(regs.map(r => r.update().catch(() => {})));
+    for (const k of await caches.keys()) await caches.delete(k);
+  } catch {}
+  location.reload();
+};
 F.targets = d => { S.targets = { kcal: num(d.kcal), protein: num(d.protein), carbs: num(d.carbs), fat: num(d.fat), waterMl: num(d.waterMl) }; save(); toast('Targets saved'); render(); };
 F.ai = d => { Object.assign(S.ai, d); save(); toast('AI settings saved'); };
 A.testAI = async (_, btn) => {

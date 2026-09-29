@@ -2,6 +2,7 @@
 // Shared state, storage and helpers. All data lives on the device (localStorage + IndexedDB for photos).
 
 const KEY = 'fitlog.v1';
+const APP_VERSION = 9; // bump with the service worker cache name
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
 

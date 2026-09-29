@@ -80,6 +80,19 @@ try { const t = sessionStorage.getItem('fitlog.tab'); if (t && V[t]) ui.tab = t;
 render();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    // check for a new version whenever the app comes back to the foreground
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+  }).catch(() => {});
+  // a new version took over: reload once so the new code runs (not mid-workout or mid-typing)
+  // (only when replacing an older version: on first install there was no controller, so nothing to refresh)
+  let reloaded = false;
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloaded || !hadController) return;
+    reloaded = true;
+    const busy = S.activeWorkout || ui.busy || document.activeElement?.matches('input, textarea');
+    if (busy) toast('Update ready: close and reopen Fit Log', 5000); else location.reload();
+  });
 }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
