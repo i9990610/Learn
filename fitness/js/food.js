@@ -30,7 +30,7 @@ function quickLogCard(k, { compact = false } = {}) {
   const meal = ui.logMeal || 'Auto', busy = ui.busy === 'log';
   let html = `<div class="card yellow"><h2>What did you eat?</h2><form data-form="aiLog">
     ${(ui.logImages || []).length ? `<div class="row wrap small" style="margin-bottom:8px">${ui.logImages.map((src, i) => `<span style="position:relative;display:inline-block"><img src="${src}" style="width:52px;height:52px;object-fit:cover;border-radius:12px;display:block"><button type="button" class="x" data-act="clearLogImage" data-arg="${i}" style="position:absolute;top:-8px;right:-8px;background:#111;color:#fff;border-radius:50%;width:22px;height:22px;padding:0;font-size:14px" aria-label="Remove photo">×</button></span>`).join('')}<span>${ui.logImages.length} photo${ui.logImages.length > 1 ? 's' : ''}. Add a note if you like, then send.</span></div>` : ''}
-    <div class="row" style="align-items:flex-end"><button type="button" class="btn round-btn" style="background:var(--surface);border-color:#111;color:#111" data-act="photoMenu" data-arg="logImage" aria-label="Add a photo">📷</button>
+    <div class="row" style="align-items:flex-end"><label class="btn round-btn" style="background:var(--surface);border-color:#111;color:#111" aria-label="Add photos from your album">🖼️<input type="file" accept="image/*" multiple data-input="logImage" hidden></label>
     <textarea name="text" class="grow" rows="2" data-enter placeholder="e.g. burrito bowl + large flat white" style="min-height:48px;border-radius:20px">${esc(ui.logDraft || '')}</textarea>
     <button class="btn primary sm round-btn" style="background:#111;border-color:#111;color:#fff" ${busy ? 'disabled' : ''} aria-label="Log">${busy ? '<span class="spinner"></span>' : '<svg viewBox="0 0 24 24" width="20" height="20" stroke-width="2.6"><path d="M12 19V5M6 11l6-6 6 6"/></svg>'}</button></div>
     ${compact ? '' : `<div class="chips" style="margin-top:10px">${['Auto', ...MEALS].map(m => `<button type="button" class="chip ${m === meal ? 'on' : ''}" style="${m === meal ? 'background:#111;border-color:#111;color:#fff' : 'background:transparent;border-color:rgba(17,17,17,.25);color:#111'}" data-act="pickLogMeal" data-arg="${m}">${m}</button>`).join('')}</div>`}
@@ -90,8 +90,8 @@ F.aiLog = async d => {
 A.pickLogMeal = m => { ui.logMeal = m; const ta = $('[data-form=aiLog] textarea'); if (ta) ui.logDraft = ta.value; render(); };
 I.logImage = async el => {
   const files = [...el.files];
-  closeModal();
   if (!files.length) return;
+  const ta = $('[data-form=aiLog] textarea'); if (ta) ui.logDraft = ta.value;
   const room = 4 - (ui.logImages || []).length;
   if (files.length > room) toast('Up to 4 photos per log');
   try {
@@ -105,16 +105,6 @@ A.undoLog = () => {
   if (!L) return;
   S.food[L.date] = dayFood(L.date).filter(e => !L.ids.includes(e.id));
   ui.lastLog = null; save(); toast('Removed'); render();
-};
-
-// Photo source picker: the camera only opens if you choose it
-A.photoMenu = target => {
-  const ta = $('[data-form=aiLog] textarea'); if (ta) ui.logDraft = ta.value;
-  const multi = target === 'logImage' ? 'multiple' : '';
-  openModal(`<h2>Add a photo<button class="x" data-act="close">×</button></h2>
-    <label class="btn primary block" style="margin-bottom:10px">🖼️ Choose from Photos<input type="file" accept="image/*" ${multi} data-input="${target}" data-nofocus hidden></label>
-    <label class="btn block">📷 Take a photo<input type="file" accept="image/*" capture="environment" data-input="${target}" data-nofocus hidden></label>
-    ${multi ? '<p class="small muted" style="margin:10px 0 0">You can pick up to 4 photos, e.g. the meal and its nutrition label.</p>' : ''}`);
 };
 
 // ---------- food log ----------
@@ -236,7 +226,7 @@ function foodChat(k) {
     html += `<div class="bot">${blob('var(--yellow)', 0)}<div class="msg assistant">Ask me anything about your food and macros, e.g. "how much protein do I have left?" or "what should I have for dinner?". If you tell me something you ate, I'll log it for you automatically.</div></div>`;
   }
   S.chat.forEach((m, i) => {
-    if (m.role === 'user') html += `<div class="msg user">${m.image ? '<div class="small">📷 photo</div>' : ''}${esc(m.text)}</div>`;
+    if (m.role === 'user') html += `<div class="msg user">${m.image ? '<div class="small">🖼️ photo</div>' : ''}${esc(m.text)}</div>`;
     else if (m.role === 'error') html += `<div class="msg error small">${esc(m.text)}</div>`;
     else html += `<div class="bot">${blob('var(--yellow)', 0)}<div class="msg assistant">${esc(m.text)}${m.items?.length ? proposal(m, i) : ''}</div></div>`;
   });
@@ -245,7 +235,7 @@ function foodChat(k) {
   <div class="chips scroller" style="margin-bottom:8px">${['How much protein do I have left today?', 'High-protein snack under 300 kcal', 'What should I have for dinner?'].map(q => `<button class="chip tint" data-act="chatQuick" data-arg="${esc(q)}">${esc(q)}</button>`).join('')}</div>
   <form class="composer" data-form="chat">
     ${ui.pendingImage ? `<div class="row small" style="margin-bottom:6px"><img src="${ui.pendingImage}" style="width:48px;height:48px;object-fit:cover;border-radius:6px"> Photo attached <button type="button" class="x" data-act="clearImage">×</button></div>` : ''}
-    <div class="row"><button type="button" class="btn round-btn" data-act="photoMenu" data-arg="chatImage" aria-label="Add a photo">📷</button>
+    <div class="row"><label class="btn round-btn" aria-label="Add a photo from your album">🖼️<input type="file" accept="image/*" data-input="chatImage" hidden></label>
     <textarea name="text" class="grow" rows="1" placeholder="Ask about food or macros"></textarea>
     <button class="btn primary sm round-btn" ${ui.busy ? 'disabled' : ''} aria-label="Send"><svg viewBox="0 0 24 24" width="20" height="20" stroke-width="2.6"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button></div>
     <div class="row between small muted" style="margin-top:4px"><span>Food logs to: ${k === today() ? 'today' : fmtDate(k)}</span>${S.chat.length ? '<button type="button" class="btn sm ghost" data-act="clearChat">Clear chat</button>' : ''}</div>
@@ -262,7 +252,6 @@ function proposal(m, i) {
 
 I.chatImage = async el => {
   const file = el.files[0];
-  closeModal();
   if (!file) return;
   try { ui.pendingImage = await resizeImage(file, 1024, 0.75); render(); }
   catch (e) { toast(e.message); }
